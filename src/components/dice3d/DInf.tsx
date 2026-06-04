@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type * as THREE from "three";
-import { Sparkles } from "@react-three/drei";
+import * as THREE from "three";
+import { Sparkles, Billboard } from "@react-three/drei";
 import gsap from "gsap";
 import { useIdleFloat } from "./useIdleFloat";
 import { OnFaceNumber, playNumberReveal, hideNumber } from "./dieNumber";
@@ -68,9 +68,12 @@ export default function DInf({ rollNonce, onResult }: Props) {
   const nebRefs = useRef<(THREE.PointLight | null)[]>([]);
   const lineMatRef = useRef<THREE.LineBasicMaterial>(null);
   const atmosMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const haloRef = useRef<THREE.Mesh>(null); // nat-100 celebration halo ring
+  const haloMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const numRef = useRef<HTMLDivElement>(null);
   const rollingRef = useRef(false); // gates the idle spin
   const lockRef = useRef(false); // gates input through the whole roll + reveal
+  const rollGenRef = useRef(0); // increments each roll; stale reactions bail
 
   const onResultRef = useRef(onResult);
   useEffect(() => {
@@ -215,12 +218,16 @@ export default function DInf({ rollNonce, onResult }: Props) {
     const num = numRef.current;
     const grp = groupRef.current;
     const atmos = atmosMatRef.current;
+    const halo = haloRef.current;
+    const haloMat = haloMatRef.current;
     return () => {
       killIdle();
       killAmbient();
       gsap.killTweensOf(num);
       if (grp) gsap.killTweensOf(grp.scale);
       if (atmos) gsap.killTweensOf(atmos);
+      if (halo) gsap.killTweensOf(halo.scale);
+      if (haloMat) gsap.killTweensOf(haloMat);
     };
   }, [startIdle, killIdle, restoreAmbient, killAmbient]);
 
@@ -235,6 +242,10 @@ export default function DInf({ rollNonce, onResult }: Props) {
     if (!g || lockRef.current) return;
     lockRef.current = true;
     rollingRef.current = true;
+    // Generation token: the cosmic nat-1 recovery runs longer than the input
+    // lock, so a stale resume from a previous roll must not resume idle once a
+    // newer roll has taken over.
+    const myGen = ++rollGenRef.current;
     killIdle();
     killAmbient();
     hideNumber(numRef.current);
@@ -293,13 +304,16 @@ export default function DInf({ rollNonce, onResult }: Props) {
         }
 
         const resume = () => {
+          if (rollGenRef.current !== myGen) return; // a newer roll owns the die
           rollingRef.current = false;
           startIdle();
         };
 
         function resolveCosmos() {
         if (isMax) {
-          // Cosmic event: everything blazes, the atmosphere pulses outward.
+          // COSMIC EVENT: every star blazes, constellations flare, the nebula
+          // lights triple, the orb glows, the atmosphere pulses outward, a halo
+          // ring blooms and fades, and the number itself glows brighter.
           starRefs.current.forEach((m) => {
             if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 1, duration: 0.2 });
           });
@@ -312,27 +326,64 @@ export default function DInf({ rollNonce, onResult }: Props) {
             gsap.fromTo(
               atmosMatRef.current,
               { opacity: 0.04 },
-              { opacity: 0.2, duration: 0.5, yoyo: true, repeat: 1, ease: "power2.inOut" }
+              { opacity: 0.15, duration: 0.5, yoyo: true, repeat: 1, ease: "power2.inOut" }
             );
+          }
+          // Halo ring: blooms from the orb's edge outward (radius ~1.6 → ~2.5)
+          // while fading, over 0.8s.
+          const halo = haloRef.current;
+          const haloMat = haloMatRef.current;
+          if (halo && haloMat) {
+            gsap.killTweensOf(halo.scale);
+            gsap.killTweensOf(haloMat);
+            gsap.fromTo(halo.scale, { x: 1, y: 1, z: 1 }, { x: 1.55, y: 1.55, z: 1.55, duration: 0.8, ease: "power2.out" });
+            gsap.fromTo(haloMat, { opacity: 0.4 }, { opacity: 0, duration: 0.8, ease: "power2.out" });
+          }
+          // The number glows brighter for 1s, then settles back to its theme.
+          const numEl = numRef.current;
+          if (numEl) {
+            numEl.style.textShadow = "0 0 24px rgba(148,184,255,0.9), 0 0 8px rgba(148,184,255,0.7)";
+            gsap.delayedCall(1.0, () => {
+              if (numEl) numEl.style.textShadow = "0 0 12px rgba(148,184,255,0.5)";
+            });
           }
           gsap.delayedCall(1.0, () => {
             restoreAmbient();
             resume();
           });
         } else if (isMin) {
-          // The cosmos dies: stars dim, lines vanish, the orb goes dark.
+          // COSMIC DARKNESS: stars gutter to near-black, constellations vanish,
+          // the nebula lights die and the orb goes dark. Hold the void, then let
+          // the stars twinkle back one by one (staggered) before ambient resumes.
           starRefs.current.forEach((m) => {
-            if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 0.05, duration: 0.5 });
+            if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 0.03, duration: 0.5 });
           });
           if (lineMatRef.current) gsap.to(lineMatRef.current, { opacity: 0, duration: 0.5 });
           nebRefs.current.forEach((l) => {
             if (l) gsap.to(l, { intensity: 0, duration: 0.5 });
           });
-          if (orbMatRef.current) gsap.to(orbMatRef.current, { emissiveIntensity: 0.05, duration: 0.5 });
-          // Hold the dark, then let everything fade back as the twinkle resumes.
-          gsap.delayedCall(2.0, () => {
-            restoreAmbient();
-            resume();
+          if (orbMatRef.current) gsap.to(orbMatRef.current, { emissiveIntensity: 0.02, duration: 0.5 });
+          gsap.delayedCall(1.5, () => {
+            // Staggered revival: each star fades back on its own slight delay.
+            starRefs.current.forEach((m, i) => {
+              if (m)
+                gsap.to(m.material as THREE.MeshBasicMaterial, {
+                  opacity: stars[i].twHi,
+                  duration: 1.0,
+                  delay: i * 0.01,
+                  ease: "sine.out",
+                });
+            });
+            if (lineMatRef.current) gsap.to(lineMatRef.current, { opacity: 0.3, duration: 1.0 });
+            nebRefs.current.forEach((l, i) => {
+              if (l) gsap.to(l, { intensity: NEBULA[i].max * 0.5, duration: 1.0 });
+            });
+            if (orbMatRef.current) gsap.to(orbMatRef.current, { emissiveIntensity: 0.5, duration: 1.0 });
+            // Once the field is back, hand control to the looping ambient + idle.
+            gsap.delayedCall(1.0, () => {
+              restoreAmbient();
+              resume();
+            });
           });
         } else {
           restoreAmbient();
@@ -446,6 +497,21 @@ export default function DInf({ rollNonce, onResult }: Props) {
 
       {/* Drifting particle ring around the orb. */}
       <Sparkles count={40} size={1.5} scale={[4, 4, 4]} speed={0.3} opacity={0.3} color="#94b8ff" />
+
+      {/* Nat-100 celebration halo — billboarded so it always faces the camera,
+          invisible (opacity 0) until a cosmic event blooms it outward. */}
+      <Billboard>
+        <mesh ref={haloRef}>
+          <ringGeometry args={[1.5, 1.62, 64]} />
+          <meshBasicMaterial
+            ref={haloMatRef}
+            color="#94b8ff"
+            transparent
+            opacity={0}
+            depthWrite={false}
+          />
+        </mesh>
+      </Billboard>
 
       <OnFaceNumber ref={numRef} style={NUMBER_STYLES.dinf} />
     </group>

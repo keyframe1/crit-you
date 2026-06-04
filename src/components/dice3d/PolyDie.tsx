@@ -8,6 +8,7 @@ import { useIdleFloat } from "./useIdleFloat";
 import { OnFaceNumber, playNumberReveal, hideNumber } from "./dieNumber";
 import { NUMBER_STYLES } from "@/lib/bubbleStyles";
 import type { DieType } from "@/lib/dice";
+import type { DieReaction } from "./reactions";
 
 export interface PolyDieConfig {
   color: string; // signature colour: faces, edge flash, point light
@@ -29,6 +30,10 @@ export interface PolyDieConfig {
   thudRecover?: number; // recovery duration back to the idle baseline (default 0.25)
   thudBounce?: boolean; // d8: a small bounce up after the drop
   thudRotateCorrect?: boolean; // d30: a regal rotateZ correction to finish
+  // The die's reaction to its own roll, played after the number appears (see
+  // reactions.ts). Each owns calling its `done()` to resume the idle float.
+  celebrate?: DieReaction; // natural max
+  fail?: DieReaction; // natural 1
 }
 
 interface Props {
@@ -63,12 +68,15 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     thudRecover = 0.25,
     thudBounce = false,
     thudRotateCorrect = false,
+    celebrate,
+    fail,
   } = config;
 
   const numberStyle = NUMBER_STYLES[dieType];
 
   const groupRef = useRef<THREE.Group>(null);
   const flashRef = useRef<THREE.PointLight>(null);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const numRef = useRef<HTMLDivElement>(null);
   // `rollingRef` gates the idle Y-spin (paused while the dice tumbles). `lockRef`
   // gates input: it stays held from the click through the full tumble, settle,
@@ -95,6 +103,7 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     const num = numRef.current;
     const grp = groupRef.current;
     const flash = flashRef.current;
+    const mat = matRef.current;
     return () => {
       killIdle();
       gsap.killTweensOf(num);
@@ -104,6 +113,10 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
         gsap.killTweensOf(grp.rotation);
       }
       if (flash) gsap.killTweensOf(flash);
+      if (mat) {
+        gsap.killTweensOf(mat);
+        gsap.killTweensOf(mat.color);
+      }
     };
   }, [startIdle, killIdle]);
 
@@ -152,43 +165,38 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
         // The die has settled square. Reveal happens AFTER the landing, so the
         // number is the payoff of a physical action rather than an overlay.
         const revealAndFinish = () => {
+          // Resume the idle float/spin once any reaction is done.
+          const resume = () => {
+            rollingRef.current = false;
+            startIdle();
+          };
+          // Once the number has faded in (onShown): raise the bubble AND play
+          // this die's emotional reaction to its roll. The reaction owns calling
+          // `resume`; a plain roll resumes immediately.
+          const react = () => {
+            onResultRef.current(value);
+            const ctx = {
+              group: g,
+              material: matRef.current,
+              flash: flashRef.current,
+              numberEl: numRef.current,
+              baseColor: color,
+              done: resume,
+            };
+            if (isMax && celebrate) celebrate(ctx);
+            else if (isMin && fail) fail(ctx);
+            else resume();
+          };
           playNumberReveal(
             numRef.current,
             value,
             max,
             NUMBER_STYLES[dieType],
-            () => onResultRef.current(value),
+            react,
             () => {
               lockRef.current = false;
             }
           );
-          // Resume the idle float/spin once any crit flourish is done.
-          const resume = () => {
-            rollingRef.current = false;
-            startIdle();
-          };
-          if (isMax) {
-            gsap.to(g.scale, {
-              x: 1.12,
-              y: 1.12,
-              z: 1.12,
-              duration: 0.2,
-              yoyo: true,
-              repeat: 1,
-              ease: "power2.out",
-            });
-            const flash = flashRef.current;
-            if (flash) {
-              flash.intensity = 2;
-              gsap.to(flash, { intensity: 0, duration: 0.8, ease: "power2.out", onComplete: resume });
-            } else {
-              resume();
-            }
-          } else if (isMin) {
-            gsap.to(g.position, { y: -0.1, duration: 0.5, ease: "power2.out", onComplete: resume });
-          } else {
-            resume();
-          }
         };
 
         // Phase 3 — landing thud (0.15s): a sharp downward dip + a squash pulse.
@@ -227,6 +235,9 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     thudRecover,
     thudBounce,
     thudRotateCorrect,
+    celebrate,
+    fail,
+    color,
   ]);
 
   const handlePointerOver = useCallback(() => {
@@ -255,7 +266,15 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
         onPointerOut={handlePointerOut}
       >
         {geometry}
-        <meshStandardMaterial color={color} metalness={0.15} roughness={0.55} flatShading />
+        <meshStandardMaterial
+          ref={matRef}
+          color={color}
+          emissive="#000000"
+          emissiveIntensity={0}
+          metalness={0.15}
+          roughness={0.55}
+          flatShading
+        />
         <Edges threshold={1} color="#1a1a18" lineWidth={edgeWidth} transparent opacity={edgeOpacity} />
       </mesh>
       <pointLight ref={flashRef} position={[0, 0, 0]} color={color} intensity={0} />

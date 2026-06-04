@@ -20,57 +20,59 @@ export default function Personality({ roll }: { roll: Roll | null }) {
     (style.fontStyle === "italic" ||
       (!!style.italicOnNatMax && !!roll && isNatMax(roll)));
 
+  // The parent (page.tsx) positions this absolutely over the die, so we only
+  // animate opacity + a small y transform here — both GPU-composited, never
+  // triggering a reflow that could move the die. AnimatePresence mode="wait" lets
+  // the old bubble fade out before the new one enters.
   return (
-    <div className="min-h-[76px] flex items-end justify-center px-6">
-      <AnimatePresence mode="wait">
-        {roll && style && (
-          <motion.div
-            key={roll.id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, transition: { duration: 0.2 } }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="relative max-w-[280px] sm:max-w-[340px]"
+    <AnimatePresence mode="wait">
+      {roll && style && (
+        <motion.div
+          key={roll.id}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="relative max-w-[85vw] sm:max-w-[360px]"
+          style={{
+            background: style.background,
+            border: style.border,
+            borderRadius: style.borderRadius,
+            boxShadow: style.boxShadow,
+            padding: style.padding,
+          }}
+        >
+          <p
+            className="text-center"
             style={{
-              background: style.background,
-              border: style.border,
-              borderRadius: style.borderRadius,
-              boxShadow: style.boxShadow,
-              padding: style.padding,
+              margin: 0,
+              color: style.color,
+              fontFamily: style.fontFamily,
+              fontSize: style.fontSize,
+              fontWeight: style.fontWeight,
+              fontStyle: italic ? "italic" : "normal",
+              letterSpacing: style.letterSpacing,
+              textTransform: style.textTransform,
+              lineHeight: style.lineHeight,
             }}
           >
-            <p
-              className="text-center"
-              style={{
-                margin: 0,
-                color: style.color,
-                fontFamily: style.fontFamily,
-                fontSize: style.fontSize,
-                fontWeight: style.fontWeight,
-                fontStyle: italic ? "italic" : "normal",
-                letterSpacing: style.letterSpacing,
-                textTransform: style.textTransform,
-                lineHeight: style.lineHeight,
-              }}
-            >
-              {roll.line}
-            </p>
-            {/* Notch: a small rotated square whose two lower edges carry the
-                bubble's border, so it reads as a triangle pointing at the die.
-                It mirrors the bubble's fill + edge for every die. */}
-            <span
-              aria-hidden
-              className="absolute left-1/2 -bottom-[5px] h-[10px] w-[10px] -translate-x-1/2 rotate-45"
-              style={{
-                background: style.notchBg,
-                borderBottom: `${style.notchBorderWidth} solid ${style.notchBorderColor}`,
-                borderRight: `${style.notchBorderWidth} solid ${style.notchBorderColor}`,
-                borderRadius: style.notchRadius,
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            {roll.line}
+          </p>
+          {/* Notch: a small rotated square whose two lower edges carry the
+              bubble's border, so it reads as a triangle pointing at the die.
+              It mirrors the bubble's fill + edge for every die. */}
+          <span
+            aria-hidden
+            className="absolute left-1/2 -bottom-[5px] h-[10px] w-[10px] -translate-x-1/2 rotate-45"
+            style={{
+              background: style.notchBg,
+              borderBottom: `${style.notchBorderWidth} solid ${style.notchBorderColor}`,
+              borderRight: `${style.notchBorderWidth} solid ${style.notchBorderColor}`,
+              borderRadius: style.notchRadius,
+            }}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

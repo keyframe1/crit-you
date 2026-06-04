@@ -1,6 +1,7 @@
 "use client";
 
 import PolyDie from "./PolyDie";
+import { celebrateD4, failD4 } from "./reactions";
 
 interface Props {
   rollNonce: number;
@@ -27,6 +28,8 @@ export default function D4({ rollNonce, onResult }: Props) {
         p2Ease: "back.out(2.5)",
         // Sharp, aggressive landing.
         thudScale: 1.05,
+        celebrate: celebrateD4,
+        fail: failD4,
       }}
     />
   );

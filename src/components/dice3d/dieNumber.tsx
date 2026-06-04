@@ -22,18 +22,26 @@ function staticStyle(s: NumberStyle): CSSProperties {
     pointerEvents: "none",
     userSelect: "none",
     WebkitUserSelect: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
 }
 
 // The result number: a drei <Html> panel anchored dead-centre on the die group
-// ([0,0,0]) and billboarded (no `transform`), so it always faces the camera and
-// stays centred no matter how the die rotates. Forwards a ref to the panel div.
+// ([0,0,0]). `center` anchors it on the group's geometric centre; `transform`
+// is off and `sprite` set so it billboards toward the camera and is NEVER
+// rotated by the die — it sits flat and readable wherever the die floats on
+// screen. No z-offset or face placement (that's what caused the off-centre
+// drift). Forwards a ref to the panel div.
 export const OnFaceNumber = forwardRef<HTMLDivElement, { style: NumberStyle }>(
   function OnFaceNumber({ style }, ref) {
     return (
       <Html
         ref={ref}
         center
+        sprite
+        transform={false}
         position={[0, 0, 0]}
         zIndexRange={[10, 0]}
         pointerEvents="none"

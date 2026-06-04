@@ -1,6 +1,7 @@
 "use client";
 
 import PolyDie from "./PolyDie";
+import { celebrateD20, failD20 } from "./reactions";
 
 interface Props {
   rollNonce: number;
@@ -28,6 +29,8 @@ export default function D20({ rollNonce, onResult }: Props) {
         p2Ease: "back.out(2.0)",
         // The benchmark landing: a clean, confident thud.
         thudScale: 1.03,
+        celebrate: celebrateD20,
+        fail: failD20,
       }}
     />
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import PolyDie from "./PolyDie";
+import { celebrateD10, failD10 } from "./reactions";
 
 interface Props {
   rollNonce: number;
@@ -30,6 +31,8 @@ export default function D10({ rollNonce, onResult }: Props) {
         meshScale: [1, 1.3, 1],
         // Clinical, precise landing — barely a squash.
         thudScale: 1.015,
+        celebrate: celebrateD10,
+        fail: failD10,
       }}
     />
   );

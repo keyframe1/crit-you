@@ -1,6 +1,7 @@
 "use client";
 
 import PolyDie from "./PolyDie";
+import { celebrateD8, failD8 } from "./reactions";
 
 interface Props {
   rollNonce: number;
@@ -29,6 +30,8 @@ export default function D8({ rollNonce, onResult }: Props) {
         // Eager: drops a touch harder, then bounces back up before settling.
         thudDrop: 0.1,
         thudBounce: true,
+        celebrate: celebrateD8,
+        fail: failD8,
       }}
     />
   );

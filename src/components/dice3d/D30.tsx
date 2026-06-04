@@ -1,6 +1,7 @@
 "use client";
 
 import PolyDie from "./PolyDie";
+import { celebrateD30, failD30 } from "./reactions";
 
 interface Props {
   rollNonce: number;
@@ -29,6 +30,8 @@ export default function D30({ rollNonce, onResult }: Props) {
         p2Ease: "back.out(1.8)",
         // A slow thud finished with a small, regal rotateZ correction.
         thudRotateCorrect: true,
+        celebrate: celebrateD30,
+        fail: failD30,
       }}
     />
   );

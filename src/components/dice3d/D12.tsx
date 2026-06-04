@@ -1,6 +1,7 @@
 "use client";
 
 import PolyDie from "./PolyDie";
+import { celebrateD12, failD12 } from "./reactions";
 
 interface Props {
   rollNonce: number;
@@ -29,6 +30,8 @@ export default function D12({ rollNonce, onResult }: Props) {
         // The landing is an EVENT: a big squash and a slow, dramatic recovery.
         thudScale: 1.06,
         thudRecover: 0.35,
+        celebrate: celebrateD12,
+        fail: failD12,
       }}
     />
   );

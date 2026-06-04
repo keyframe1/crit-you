@@ -1,6 +1,7 @@
 "use client";
 
 import PolyDie from "./PolyDie";
+import { celebrateD6, failD6 } from "./reactions";
 
 interface Props {
   rollNonce: number;
@@ -27,6 +28,8 @@ export default function D6({ rollNonce, onResult }: Props) {
         p2Ease: "back.out(1.5)",
         // Standard, reliable landing. Nothing fancy.
         thudScale: 1.02,
+        celebrate: celebrateD6,
+        fail: failD6,
       }}
     />
   );
