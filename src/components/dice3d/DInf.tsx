@@ -5,12 +5,11 @@ import * as THREE from "three";
 import { Sparkles, Billboard } from "@react-three/drei";
 import gsap from "gsap";
 import { useIdleFloat } from "./useIdleFloat";
-import { OnFaceNumber, playNumberReveal, hideNumber } from "./dieNumber";
-import { NUMBER_STYLES } from "@/lib/bubbleStyles";
 
 interface Props {
   rollNonce: number;
-  onResult: (value: number) => void;
+  onResult: (value: number) => void; // fired once the orb resolves
+  onRollStart?: () => void; // fired when a fresh roll's spin begins
 }
 
 interface Star {
@@ -61,7 +60,7 @@ function mulberry32(seed: number) {
 // the solid orb), bright stars wear constellation lines, nebula lights tint the
 // gloss, and an ice halo + drifting sparkles wrap it. It turns with a majestic
 // spin rather than a tumble.
-export default function DInf({ rollNonce, onResult }: Props) {
+export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const orbMatRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const starRefs = useRef<(THREE.Mesh | null)[]>([]);
@@ -70,16 +69,19 @@ export default function DInf({ rollNonce, onResult }: Props) {
   const atmosMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const haloRef = useRef<THREE.Mesh>(null); // nat-100 celebration halo ring
   const haloMatRef = useRef<THREE.MeshBasicMaterial>(null);
-  const numRef = useRef<HTMLDivElement>(null);
   const rollingRef = useRef(false); // gates the idle spin
   const lockRef = useRef(false); // gates input through the whole roll + reveal
   const rollGenRef = useRef(0); // increments each roll; stale reactions bail
   const boostRef = useRef(true); // exaggerated idle float until the first roll
 
   const onResultRef = useRef(onResult);
+  const onRollStartRef = useRef(onRollStart);
   useEffect(() => {
     onResultRef.current = onResult;
   }, [onResult]);
+  useEffect(() => {
+    onRollStartRef.current = onRollStart;
+  }, [onRollStart]);
 
   const { startIdle, killIdle } = useIdleFloat(
     groupRef,
@@ -217,7 +219,6 @@ export default function DInf({ rollNonce, onResult }: Props) {
     startIdle();
     restoreAmbient();
     // Capture refs now (stable for this die's lifetime) for unmount teardown.
-    const num = numRef.current;
     const grp = groupRef.current;
     const atmos = atmosMatRef.current;
     const halo = haloRef.current;
@@ -225,7 +226,6 @@ export default function DInf({ rollNonce, onResult }: Props) {
     return () => {
       killIdle();
       killAmbient();
-      gsap.killTweensOf(num);
       if (grp) gsap.killTweensOf(grp.scale);
       if (atmos) gsap.killTweensOf(atmos);
       if (halo) gsap.killTweensOf(halo.scale);
@@ -251,7 +251,8 @@ export default function DInf({ rollNonce, onResult }: Props) {
     const myGen = ++rollGenRef.current;
     killIdle();
     killAmbient();
-    hideNumber(numRef.current);
+    // A fresh roll has begun: let the page clear the previous result number.
+    onRollStartRef.current?.();
 
     const value = Math.floor(Math.random() * 100) + 1;
     const isMax = value >= 100;
@@ -274,20 +275,11 @@ export default function DInf({ rollNonce, onResult }: Props) {
       ease: "power2.inOut",
       onComplete: () => {
         // The celestial die doesn't "thud" — it RESOLVES. A gentle scale pulse
-        // (no impact), and only then does the number surface; the bubble waits
-        // for the fade-in (onShown), the input lock releases when the whole
-        // reveal finishes (onComplete).
+        // (no impact), and only then is the value reported: the page fades the
+        // CSS-overlay number in and raises the bubble. The input lock is held
+        // until the cosmos recovery finishes (see resume).
         const reveal = () => {
-          playNumberReveal(
-            numRef.current,
-            value,
-            100,
-            NUMBER_STYLES.dinf,
-            () => onResultRef.current(value),
-            () => {
-              lockRef.current = false;
-            }
-          );
+          onResultRef.current(value);
           resolveCosmos();
         };
         // Ethereal resolve pulse: scale 1 → 1.02 → 1 over 0.4s, then reveal.
@@ -310,13 +302,14 @@ export default function DInf({ rollNonce, onResult }: Props) {
           if (rollGenRef.current !== myGen) return; // a newer roll owns the die
           rollingRef.current = false;
           startIdle();
+          lockRef.current = false;
         };
 
         function resolveCosmos() {
         if (isMax) {
           // COSMIC EVENT: every star blazes, constellations flare, the nebula
-          // lights triple, the orb glows, the atmosphere pulses outward, a halo
-          // ring blooms and fades, and the number itself glows brighter.
+          // lights triple, the orb glows, the atmosphere pulses outward, and a
+          // halo ring blooms and fades.
           starRefs.current.forEach((m) => {
             if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 1, duration: 0.2 });
           });
@@ -342,15 +335,8 @@ export default function DInf({ rollNonce, onResult }: Props) {
             gsap.fromTo(halo.scale, { x: 1, y: 1, z: 1 }, { x: 1.55, y: 1.55, z: 1.55, duration: 0.8, ease: "power2.out" });
             gsap.fromTo(haloMat, { opacity: 0.4 }, { opacity: 0, duration: 0.8, ease: "power2.out" });
           }
-          // The number glows brighter for 1s, then settles back to its theme.
-          const numEl = numRef.current;
-          if (numEl) {
-            numEl.style.textShadow =
-              "0 2px 8px rgba(0,0,0,0.6), 0 0 28px rgba(148,184,255,0.95), 0 0 12px rgba(148,184,255,0.8)";
-            gsap.delayedCall(1.0, () => {
-              if (numEl) numEl.style.textShadow = NUMBER_STYLES.dinf.textShadow;
-            });
-          }
+          // The overlay already brightens the d∞ number's glow on a nat-100 (see
+          // getNumberStyle), so the cosmos only needs to settle the field back.
           gsap.delayedCall(1.0, () => {
             restoreAmbient();
             resume();
@@ -516,8 +502,6 @@ export default function DInf({ rollNonce, onResult }: Props) {
           />
         </mesh>
       </Billboard>
-
-      <OnFaceNumber ref={numRef} style={NUMBER_STYLES.dinf} />
     </group>
   );
 }

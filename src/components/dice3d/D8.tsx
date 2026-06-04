@@ -6,16 +6,17 @@ import { celebrateD8, failD8 } from "./reactions";
 interface Props {
   rollNonce: number;
   onResult: (value: number) => void;
+  onRollStart?: () => void;
 }
 
 // THE MIDDLE CHILD — eager, bouncy. A slightly larger bob and an over-eager
 // settle that tries a little too hard.
-export default function D8({ rollNonce, onResult }: Props) {
+export default function D8({ rollNonce, onResult, onRollStart }: Props) {
   return (
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
-      dieType="d8"
+      onRollStart={onRollStart}
       max={8}
       geometry={<octahedronGeometry args={[1.5, 0]} />}
       config={{

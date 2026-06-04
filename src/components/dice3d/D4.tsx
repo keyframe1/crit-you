@@ -6,15 +6,16 @@ import { celebrateD4, failD4 } from "./reactions";
 interface Props {
   rollNonce: number;
   onResult: (value: number) => void;
+  onRollStart?: () => void;
 }
 
 // THE CALTROP — small, light, twitchy. Fast spin and a nervous quick bob.
-export default function D4({ rollNonce, onResult }: Props) {
+export default function D4({ rollNonce, onResult, onRollStart }: Props) {
   return (
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
-      dieType="d4"
+      onRollStart={onRollStart}
       max={4}
       geometry={<tetrahedronGeometry args={[1.5, 0]} />}
       config={{

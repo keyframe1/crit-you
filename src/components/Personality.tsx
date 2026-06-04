@@ -24,6 +24,11 @@ export default function Personality({ roll }: { roll: Roll | null }) {
   // animate opacity + a small y transform here — both GPU-composited, never
   // triggering a reflow that could move the die. AnimatePresence mode="wait" lets
   // the old bubble fade out before the new one enters.
+  //
+  // The enter is delayed 0.45s so the bubble follows the result number (which
+  // appears 0.15s after the die lands) by ~0.3s — the die "speaks" just after
+  // its number surfaces. Exit carries its own (undelayed) transition so the
+  // bubble still leaves promptly on a new roll or a die change.
   return (
     <AnimatePresence mode="wait">
       {roll && style && (
@@ -31,8 +36,8 @@ export default function Personality({ roll }: { roll: Roll | null }) {
           key={roll.id}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          exit={{ opacity: 0, y: -4, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.45 }}
           className="relative max-w-[85vw] sm:max-w-[360px]"
           style={{
             background: style.background,

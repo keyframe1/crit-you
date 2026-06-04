@@ -6,17 +6,18 @@ import { celebrateD10, failD10 } from "./reactions";
 interface Props {
   rollNonce: number;
   onResult: (value: number) => void;
+  onRollStart?: () => void;
 }
 
 // THE STATISTICIAN — precise, mechanical. A dodecahedron stretched taller and
 // narrower (scale Y 1.3) so it reads distinct from the d12, with a controlled,
 // minimal-overshoot settle.
-export default function D10({ rollNonce, onResult }: Props) {
+export default function D10({ rollNonce, onResult, onRollStart }: Props) {
   return (
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
-      dieType="d10"
+      onRollStart={onRollStart}
       max={10}
       geometry={<dodecahedronGeometry args={[1.3, 0]} />}
       config={{

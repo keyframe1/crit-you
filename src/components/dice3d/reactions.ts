@@ -9,14 +9,14 @@ import gsap from "gsap";
 // `done()` when it finishes, which hands the die back to its idle float.
 //
 // Per-die character lives entirely in these functions; PolyDie just provides the
-// group, its (ref'd) material + point light, the number element, and the
-// signature colour. The celestial d∞ has its own bespoke cosmos reactions in
-// DInf.tsx and doesn't use these.
+// group, its (ref'd) material + point light, and the signature colour. The result
+// number is a CSS overlay (components/ResultNumber) and is never touched here.
+// The celestial d∞ has its own bespoke cosmos reactions in DInf.tsx and doesn't
+// use these.
 export interface DieAnimContext {
   group: THREE.Group;
   material: THREE.MeshStandardMaterial | null;
   flash: THREE.PointLight | null;
-  numberEl: HTMLDivElement | null;
   baseColor: string;
   done: () => void;
 }
@@ -174,34 +174,20 @@ export const failD8: DieReaction = ({ group, done }) => {
   tl.to(group.scale, { x: 1, y: 1, z: 1, duration: 0.5, ease: "power2.out" }, 0.3);
 };
 
-// D10 — GLITCH: the number stutters in/out and the body throws one red error
-// frame. System malfunction. (Leaves the number visible for its normal fade-out.)
-export const failD10: DieReaction = ({ material, numberEl, done }) => {
+// D10 — GLITCH: the body throws one red error frame. System malfunction. The
+// number's matching stutter (it flickers in instead of fading) is rendered by the
+// CSS overlay, ResultNumber, keyed to this die's nat-1 — so the glitch reads on
+// both the body and the readout without the scene touching any text.
+export const failD10: DieReaction = ({ material, done }) => {
   const tl = gsap.timeline({ onComplete: done });
-  if (numberEl) {
-    tl.to(
-      numberEl,
-      {
-        keyframes: [
-          { opacity: 0, duration: 0.057 },
-          { opacity: 1, duration: 0.057 },
-          { opacity: 0, duration: 0.057 },
-          { opacity: 1, duration: 0.057 },
-          { opacity: 0, duration: 0.057 },
-          { opacity: 1, duration: 0.057 },
-        ],
-        ease: "none",
-      },
-      0
-    );
-    tl.set(numberEl, { opacity: 1 });
-  }
+  // Hold ~0.4s (the length of the overlay's glitch) so the malfunction reads even
+  // when the body has no material to flash.
+  tl.to({}, { duration: 0.4 }, 0);
   if (material) {
     material.emissive.set("#ff0000");
     tl.set(material, { emissiveIntensity: 1 }, 0.1);
     tl.set(material, { emissiveIntensity: 0 }, 0.15);
   }
-  if (!numberEl && !material) tl.to({}, { duration: 0.4 });
 };
 
 // D12 — DRAMATIC COLLAPSE: sink and shrink with despair, hold at the bottom, then

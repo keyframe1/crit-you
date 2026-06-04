@@ -6,16 +6,17 @@ import { celebrateD12, failD12 } from "./reactions";
 interface Props {
   rollNonce: number;
   onResult: (value: number) => void;
+  onRollStart?: () => void;
 }
 
 // THE UNDERDOG — dramatic, theatrical. The biggest sweeping bob, a long wind-up,
 // and a slow dramatic settle.
-export default function D12({ rollNonce, onResult }: Props) {
+export default function D12({ rollNonce, onResult, onRollStart }: Props) {
   return (
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
-      dieType="d12"
+      onRollStart={onRollStart}
       max={12}
       geometry={<dodecahedronGeometry args={[1.5, 0]} />}
       config={{

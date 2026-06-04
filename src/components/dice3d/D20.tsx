@@ -6,16 +6,17 @@ import { celebrateD20, failD20 } from "./reactions";
 interface Props {
   rollNonce: number;
   onResult: (value: number) => void;
+  onRollStart?: () => void;
 }
 
 // THE BENCHMARK — the confident centrepiece. Balanced float, bold crimson faces,
 // the original two-phase tumble every other die is tuned against.
-export default function D20({ rollNonce, onResult }: Props) {
+export default function D20({ rollNonce, onResult, onRollStart }: Props) {
   return (
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
-      dieType="d20"
+      onRollStart={onRollStart}
       max={20}
       geometry={<icosahedronGeometry args={[1.5, 0]} />}
       config={{

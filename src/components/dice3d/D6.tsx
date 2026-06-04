@@ -6,15 +6,16 @@ import { celebrateD6, failD6 } from "./reactions";
 interface Props {
   rollNonce: number;
   onResult: (value: number) => void;
+  onRollStart?: () => void;
 }
 
 // THE BASIC — slow, steady, reliable. The slowest spin and a minimal bob.
-export default function D6({ rollNonce, onResult }: Props) {
+export default function D6({ rollNonce, onResult, onRollStart }: Props) {
   return (
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
-      dieType="d6"
+      onRollStart={onRollStart}
       max={6}
       geometry={<boxGeometry args={[1.8, 1.8, 1.8]} />}
       config={{

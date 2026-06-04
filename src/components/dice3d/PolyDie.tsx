@@ -5,9 +5,6 @@ import type * as THREE from "three";
 import { Edges } from "@react-three/drei";
 import gsap from "gsap";
 import { useIdleFloat } from "./useIdleFloat";
-import { OnFaceNumber, playNumberReveal, hideNumber } from "./dieNumber";
-import { NUMBER_STYLES } from "@/lib/bubbleStyles";
-import type { DieType } from "@/lib/dice";
 import type { DieReaction } from "./reactions";
 
 export interface PolyDieConfig {
@@ -24,7 +21,8 @@ export interface PolyDieConfig {
   tumbleZ?: number; // ± random twist during the launch (default 0.8)
   meshScale?: [number, number, number]; // non-uniform shape stretch (d10)
   // Phase 3/4 landing — after the settle the die physically "lands" on its face,
-  // and ONLY THEN does the number reveal. Per-die character lives here:
+  // and ONLY THEN does it report its value (the page reveals the number). Per-die
+  // character lives here:
   thudScale?: number; // squash peak on impact (default 1.03)
   thudDrop?: number; // downward dip on impact, world units (default 0.08)
   thudRecover?: number; // recovery duration back to the idle baseline (default 0.25)
@@ -38,8 +36,8 @@ export interface PolyDieConfig {
 
 interface Props {
   rollNonce: number;
-  onResult: (value: number) => void;
-  dieType: DieType; // selects this die's on-face number style
+  onResult: (value: number) => void; // fired once the die has landed
+  onRollStart?: () => void; // fired when a fresh roll's tumble begins
   max: number;
   config: PolyDieConfig;
   geometry: ReactNode; // the <xxxGeometry/> element for this die
@@ -47,9 +45,11 @@ interface Props {
 
 // The shared body for every polyhedral die: a flat-shaded solid with drei Edges
 // for bold face lines, the idle float/spin, a two-phase roll tumble, a landing
-// thud, hover, a nat-max pulse + colour light flash, a nat-min droop, and the
-// on-face number. Per-die character comes entirely from `config` + `geometry`.
-export default function PolyDie({ rollNonce, onResult, dieType, max, config, geometry }: Props) {
+// thud, hover, a nat-max pulse + colour light flash, and a nat-min droop. The
+// result number is NOT drawn here — it's a CSS overlay the page renders over the
+// canvas — so this component touches no text at all. Per-die character comes
+// entirely from `config` + `geometry`.
+export default function PolyDie({ rollNonce, onResult, onRollStart, max, config, geometry }: Props) {
   const {
     color,
     edgeWidth,
@@ -72,25 +72,29 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     fail,
   } = config;
 
-  const numberStyle = NUMBER_STYLES[dieType];
-
   const groupRef = useRef<THREE.Group>(null);
   const flashRef = useRef<THREE.PointLight>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
-  const numRef = useRef<HTMLDivElement>(null);
   // `rollingRef` gates the idle Y-spin (paused while the dice tumbles). `lockRef`
   // gates input: it stays held from the click through the full tumble, settle,
-  // landing, and result display, so a rapid click can't interrupt or restart it.
+  // landing, and any reaction, so a rapid click can't interrupt or restart it.
   const rollingRef = useRef(false);
   const lockRef = useRef(false);
   // Exaggerated idle float until this die's first roll (the empty-state "roll me"
   // invitation); flipped false when a roll begins.
   const boostRef = useRef(true);
+  // The delayed reaction (celebration / failure) is scheduled after the landing;
+  // tracked so a die-switch unmount can cancel it before it fires.
+  const reactionDelay = useRef<gsap.core.Tween | null>(null);
 
   const onResultRef = useRef(onResult);
+  const onRollStartRef = useRef(onRollStart);
   useEffect(() => {
     onResultRef.current = onResult;
   }, [onResult]);
+  useEffect(() => {
+    onRollStartRef.current = onRollStart;
+  }, [onRollStart]);
 
   const { startIdle, killIdle } = useIdleFloat(
     groupRef,
@@ -104,13 +108,12 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     // On unmount (e.g. switching dice) tear down every tween this die owns so
     // nothing keeps animating a detached object. Capture the refs now; they're
     // stable for this die's lifetime.
-    const num = numRef.current;
     const grp = groupRef.current;
     const flash = flashRef.current;
     const mat = matRef.current;
     return () => {
       killIdle();
-      gsap.killTweensOf(num);
+      reactionDelay.current?.kill();
       if (grp) {
         gsap.killTweensOf(grp.scale);
         gsap.killTweensOf(grp.position);
@@ -138,7 +141,9 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     boostRef.current = false; // first roll calms the exaggerated idle float
     killIdle();
     gsap.killTweensOf(g.scale);
-    hideNumber(numRef.current);
+    // A fresh roll has begun: let the page clear the previous result number so it
+    // doesn't hang over the tumbling die.
+    onRollStartRef.current?.();
 
     const value = Math.floor(Math.random() * max) + 1;
     const isMax = value >= max;
@@ -167,47 +172,46 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
       delay: p1Dur,
       ease: p2Ease,
       onComplete: () => {
-        // The die has settled square. Reveal happens AFTER the landing, so the
-        // number is the payoff of a physical action rather than an overlay.
+        // The die has settled square. The value is reported AFTER the landing, so
+        // the number is the payoff of a physical action rather than an overlay.
         const revealAndFinish = () => {
-          // Resume the idle float/spin once any reaction is done.
+          // Resume the idle float/spin and release the input lock.
           const resume = () => {
             rollingRef.current = false;
             startIdle();
+            lockRef.current = false;
           };
-          // Once the number has faded in (onShown): raise the bubble AND play
-          // this die's emotional reaction to its roll. The reaction owns calling
-          // `resume`; a plain roll resumes immediately.
-          const react = () => {
-            onResultRef.current(value);
-            const ctx = {
-              group: g,
-              material: matRef.current,
-              flash: flashRef.current,
-              numberEl: numRef.current,
-              baseColor: color,
-              done: resume,
-            };
-            if (isMax && celebrate) celebrate(ctx);
-            else if (isMin && fail) fail(ctx);
-            else resume();
-          };
-          playNumberReveal(
-            numRef.current,
-            value,
-            max,
-            NUMBER_STYLES[dieType],
-            react,
-            () => {
-              lockRef.current = false;
-            }
-          );
+
+          // Roll complete: hand the value to the page, which fades the CSS-overlay
+          // number in (0.15s later) and raises the speech bubble (0.3s after the
+          // number). The 3D scene renders no text.
+          onResultRef.current(value);
+
+          if ((isMax && celebrate) || (isMin && fail)) {
+            // The die reacts 0.1s after the number appears (~0.25s after the
+            // landing), so the celebration never fights the reveal. The reaction
+            // owns calling `done` (= resume) when it finishes.
+            reactionDelay.current = gsap.delayedCall(0.25, () => {
+              const ctx = {
+                group: g,
+                material: matRef.current,
+                flash: flashRef.current,
+                baseColor: color,
+                done: resume,
+              };
+              if (isMax && celebrate) celebrate(ctx);
+              else if (isMin && fail) fail(ctx);
+              else resume();
+            });
+          } else {
+            resume();
+          }
         };
 
         // Phase 3 — landing thud (0.15s): a sharp downward dip + a squash pulse.
         // power4.out reads as the die clicking onto a surface. Phase 4 —
         // recovery: ease back up to the idle baseline (y:0). d8 adds a small
-        // bounce; d30 a regal rotateZ correction. Then the number reveals.
+        // bounce; d30 a regal rotateZ correction. Then the value is reported.
         const tl = gsap.timeline({ onComplete: revealAndFinish });
         tl.to(g.position, { y: -thudDrop, duration: 0.15, ease: "power4.out" }, 0);
         tl.to(g.scale, { x: thudScale, y: thudScale, z: thudScale, duration: 0.075, ease: "power4.out" }, 0);
@@ -228,7 +232,6 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     rollNonce,
     killIdle,
     startIdle,
-    dieType,
     max,
     p1Dur,
     p2Dur,
@@ -283,7 +286,6 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
         <Edges threshold={1} color="#1a1a18" lineWidth={edgeWidth} transparent opacity={edgeOpacity} />
       </mesh>
       <pointLight ref={flashRef} position={[0, 0, 0]} color={color} intensity={0} />
-      <OnFaceNumber ref={numRef} style={numberStyle} />
     </group>
   );
 }

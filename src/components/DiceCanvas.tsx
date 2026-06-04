@@ -14,39 +14,45 @@ import DInf from "./dice3d/DInf";
 
 interface Props {
   dieType: DieType;
-  // Fired with the rolled value once the die reveals it; the parent owns the
-  // personality line and the share state.
+  // Fired with the rolled value once the die has landed; the parent owns the
+  // personality line, the CSS-overlay result number, and the share state.
   onRoll: (value: number) => void;
+  // Fired when a fresh roll's tumble begins, so the parent can clear the stale
+  // result number before the new value lands.
+  onRollStart?: () => void;
 }
 
-// Pick the 3D component for the selected die. Each die owns its own on-face
-// result number, so there is nothing for the canvas to render over the top.
+// Pick the 3D component for the selected die. Dice render only their 3D mesh and
+// animations now — the result number is a CSS overlay drawn by the page over the
+// top of this canvas, never inside the scene.
 function Die3D({
   dieType,
   rollNonce,
   onResult,
+  onRollStart,
 }: {
   dieType: DieType;
   rollNonce: number;
   onResult: (value: number) => void;
+  onRollStart?: () => void;
 }) {
   switch (dieType) {
     case "d4":
-      return <D4 rollNonce={rollNonce} onResult={onResult} />;
+      return <D4 rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     case "d6":
-      return <D6 rollNonce={rollNonce} onResult={onResult} />;
+      return <D6 rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     case "d8":
-      return <D8 rollNonce={rollNonce} onResult={onResult} />;
+      return <D8 rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     case "d10":
-      return <D10 rollNonce={rollNonce} onResult={onResult} />;
+      return <D10 rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     case "d12":
-      return <D12 rollNonce={rollNonce} onResult={onResult} />;
+      return <D12 rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     case "d20":
-      return <D20 rollNonce={rollNonce} onResult={onResult} />;
+      return <D20 rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     case "d30":
-      return <D30 rollNonce={rollNonce} onResult={onResult} />;
+      return <D30 rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     case "dinf":
-      return <DInf rollNonce={rollNonce} onResult={onResult} />;
+      return <DInf rollNonce={rollNonce} onResult={onResult} onRollStart={onRollStart} />;
     default:
       return null;
   }
@@ -54,7 +60,7 @@ function Die3D({
 
 // The shared Three.js stage: one Canvas, lighting, and a shadow-catching floor,
 // hosting whichever die is selected.
-export default function DiceCanvas({ dieType, onRoll }: Props) {
+export default function DiceCanvas({ dieType, onRoll, onRollStart }: Props) {
   // Clicking anywhere in the stage bumps this; the die component watches it and
   // rolls (guarding against re-rolls mid-animation itself).
   const [rollNonce, setRollNonce] = useState(0);
@@ -113,6 +119,7 @@ export default function DiceCanvas({ dieType, onRoll }: Props) {
           dieType={dieType}
           rollNonce={rollNonce}
           onResult={onRoll}
+          onRollStart={onRollStart}
         />
       </Canvas>
     </div>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Personality from "@/components/Personality";
 import DiceSelector from "@/components/DiceSelector";
 import ShareCard from "@/components/ShareCard";
+import ResultNumber from "@/components/ResultNumber";
 import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
 import { pickLine } from "@/lib/lines";
 
@@ -18,11 +19,17 @@ const DiceCanvas = dynamic(() => import("@/components/DiceCanvas"), {
 export default function Home() {
   const [dieType, setDieType] = useState<DieType>(DEFAULT_DIE);
   const [roll, setRoll] = useState<Roll | null>(null);
+  // The result number lives in a CSS overlay (ResultNumber), not the 3D scene.
+  // Its visibility is owned here so it can fade out on its own timer — after the
+  // hold, or when a new roll begins — while the bubble and share state persist.
+  const [numberVisible, setNumberVisible] = useState(false);
   const rollId = useRef(0);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // The die reports its rolled value; we own the line choice so the displayed
-  // personality text and the share card always agree. The result number itself
-  // now renders inside the die.
+  // The die reports its rolled value once it has landed; we own the line choice
+  // so the displayed personality text and the share card always agree. Showing
+  // the number kicks off its hold timer: it appears 0.15s later (ResultNumber)
+  // and stays for 2.0s before fading out.
   const handleRoll = useCallback(
     (value: number) => {
       const max = maxFor(dieType);
@@ -33,15 +40,32 @@ export default function Home() {
         dieType,
         line: pickLine(dieType, value),
       });
+      setNumberVisible(true);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setNumberVisible(false), 2150);
     },
     [dieType]
   );
+
+  // The die signals when a fresh roll begins (the tumble); clear the previous
+  // result number so it doesn't hang over the die while it rolls. The bubble is
+  // intentionally left up until the new value lands.
+  const handleRollStart = useCallback(() => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setNumberVisible(false);
+  }, []);
 
   // Switching dice clears the stale result so the line doesn't outlive the die
   // it belonged to.
   const handleSelect = useCallback((type: DieType) => {
     setDieType(type);
     setRoll(null);
+    setNumberVisible(false);
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+  }, []);
+
+  useEffect(() => () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
   }, []);
 
   return (
@@ -87,7 +111,11 @@ export default function Home() {
           <Personality roll={roll} />
         </div>
         {/* Every die is a real 3D object on the shared Three.js stage. */}
-        <DiceCanvas dieType={dieType} onRoll={handleRoll} />
+        <DiceCanvas dieType={dieType} onRoll={handleRoll} onRollStart={handleRollStart} />
+        {/* The result number is a plain CSS overlay centred over the canvas — a
+            sibling of the 3D scene, never rendered inside it. It's a div centred
+            on a div, so it can't drift off-side, z-fight, or land on an edge. */}
+        <ResultNumber roll={roll} visible={numberVisible} />
       </div>
 
       {/* Selector tray — a subtle top border + tint separate it from the die
