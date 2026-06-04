@@ -5,9 +5,8 @@ import { motion, useMotionValue, animate } from "framer-motion";
 import {
   DICE,
   SHAPES,
-  DIE_STROKE,
+  WIRE_COLOR,
   animFor,
-  faceColor,
   labelFor,
   type DieType,
 } from "@/lib/dice";
@@ -17,10 +16,12 @@ interface Props {
   onChange: (type: DieType) => void;
 }
 
-// Miniature of the exact same solid die used full-size — the same shaded
-// signature-colour facets, scaled down. The selected chip's facets brighten a
-// touch; unselected chips are dimmed by the button's opacity.
-const MINI_SILHOUETTE = 3;
+// Miniature of the exact same wireframe-first die used full-size: translucent
+// signature-colour fills behind a dark ink wireframe, scaled down. The strokes
+// are bumped up a touch so the lines hold at chip size. Selected chips show the
+// fills at slightly higher opacity; unselected chips are dimmed by the button.
+const MINI_OUTER = 4;
+const MINI_INNER = 2;
 
 function MiniDie({ type, active }: { type: DieType; active: boolean }) {
   const shape = SHAPES[type];
@@ -28,7 +29,7 @@ function MiniDie({ type, active }: { type: DieType; active: boolean }) {
 
   // The celestial die has no facets — a tiny constellation instead.
   if (type === "dinf") {
-    const c = active ? color : DIE_STROKE;
+    const c = active ? color : WIRE_COLOR;
     return (
       <svg viewBox="0 0 160 160" className="w-full h-full" style={{ overflow: "visible" }}>
         <circle
@@ -51,30 +52,34 @@ function MiniDie({ type, active }: { type: DieType; active: boolean }) {
 
   return (
     <svg viewBox="0 0 160 160" className="w-full h-full" style={{ overflow: "visible" }}>
-      {shape.faces.map((f, i) => {
-        const fc = faceColor(color, f.depth, active);
-        return (
-          <polygon
-            key={i}
-            points={f.points}
-            fill={fc}
-            stroke={fc}
-            strokeWidth={0.75}
-            strokeLinejoin="round"
-          />
-        );
-      })}
-      {shape.polygons.map((points, i) => (
+      {shape.fills.map((f, i) => (
         <polygon
-          key={`o${i}`}
-          points={points}
-          fill="none"
-          stroke={DIE_STROKE}
-          strokeWidth={MINI_SILHOUETTE}
-          strokeOpacity={0.35}
-          strokeLinejoin="round"
+          key={`f${i}`}
+          points={f.points}
+          fill={color}
+          fillOpacity={active ? Math.min(f.opacity * 1.4, 0.6) : f.opacity}
+          stroke="none"
         />
       ))}
+      {shape.wireLines.map(([x1, y1, x2, y2], i) => (
+        <line
+          key={`w${i}`}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke={WIRE_COLOR}
+          strokeWidth={MINI_INNER}
+          strokeLinecap="round"
+        />
+      ))}
+      <polygon
+        points={shape.outline}
+        fill="none"
+        stroke={WIRE_COLOR}
+        strokeWidth={MINI_OUTER}
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

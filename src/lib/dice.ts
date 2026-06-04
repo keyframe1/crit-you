@@ -51,88 +51,90 @@ export function isNatMin(roll: Roll): boolean {
   return roll.value <= 1;
 }
 
-// SVG geometry, authored in a 160×160 viewBox centred on (80,80). Each polyhedral
-// die is a SOLID object:
-//   • `faces`  — opaque, closed facets that exactly tile the silhouette, each
-//                shaded a different brightness of the signature colour (light
-//                from the upper-left: `depth` 0 = darkest/facing away, 1 =
-//                lightest/facing the light). Authored back-to-front (darkest
-//                first) so nothing shows through.
-//   • `edges`  — the internal facet boundaries, each drawn ONCE as a subtle
-//                off-white line so the facets read without looking like a
-//                wireframe. No die has a single hub where many edges converge.
-//   • `polygons` — the outer silhouette only.
-// The celestial d∞ does not use this model (it renders a star sphere instead),
-// so its entry is intentionally empty.
-export interface Face {
+// SVG geometry, authored in a 160×160 viewBox centred on (80,80). This is a
+// WIREFRAME-FIRST model (matching the reroll d20): every die is drawn in two
+// layers —
+//   • `fills`     — translucent signature-colour face polygons drawn BEHIND the
+//                   wireframe, at low opacity (~0.12–0.25) so they read as a
+//                   subtle depth wash, never hiding the lines. They tile the
+//                   silhouette using the wireframe's own vertices.
+//   • `outline`   — the outer silhouette, the heavy wire (stroke 2.2, dark ink).
+//   • `wireLines` — the internal triangulation, the light wire (stroke 1.0).
+// The lines define the shape and are ALWAYS visible on top; the fills only add
+// colour personality. The celestial d∞ does not use this model (it renders a
+// star sphere instead), so its entry is intentionally empty.
+export interface FaceFill {
   points: string;
-  depth: number;
+  opacity: number;
 }
+
+export type WireLine = [number, number, number, number];
 
 export interface DieShape {
-  polygons: string[];
-  faces: Face[];
-  edges: [number, number, number, number][];
+  outline: string;
+  wireLines: WireLine[];
+  fills: FaceFill[];
 }
 
+// The wireframe ink and its two weights: a heavy outer silhouette and a light
+// internal triangulation, both the page's dark ink so they read as drawn lines
+// on the cream background.
+export const WIRE_COLOR = "#1a1a18";
+export const WIRE_OUTER = 2.2;
+export const WIRE_INNER = 1.0;
+
 export const SHAPES: Record<DieType, DieShape> = {
-  // Tetrahedron — a precise equilateral triangle (circumradius 72, centroid at
-  // the centre), three kite faces meeting at the centroid.
+  // Tetrahedron — a centred equilateral triangle (centroid at 80,80) with the
+  // three medians (each vertex → opposite edge midpoint), meeting at the centre.
+  // Three faces fanned from the centroid.
   d4: {
-    polygons: ["80,8 142.35,116 17.65,116"],
-    faces: [
-      { points: "142.35,116 80,116 80,80 111.175,62", depth: 0.4 }, // bottom-right
-      { points: "17.65,116 48.825,62 80,80 80,116", depth: 0.5 }, // bottom-left
-      { points: "80,8 111.175,62 80,80 48.825,62", depth: 0.9 }, // top (lit)
+    outline: "80,8 142.35,116 17.65,116",
+    wireLines: [
+      [80, 8, 80, 116],
+      [142.35, 116, 48.825, 62],
+      [17.65, 116, 111.175, 62],
     ],
-    edges: [
-      [80, 80, 111.175, 62],
-      [80, 80, 48.825, 62],
-      [80, 80, 80, 116],
+    fills: [
+      { points: "17.65,116 80,8 80,80", opacity: 0.14 }, // upper-left (lit)
+      { points: "80,8 142.35,116 80,80", opacity: 0.18 }, // right
+      { points: "142.35,116 17.65,116 80,80", opacity: 0.22 }, // bottom
     ],
   },
-  // Cube — a regular hexagon with three spokes from the centre at exactly 120°
-  // (top / left / right rhombic faces).
+  // Isometric cube — a pointy-top hexagon with three spokes from the centre to
+  // the top / lower-left / lower-right vertices, giving three rhombic faces.
   d6: {
-    polygons: ["80,8 142.35,44 142.35,116 80,152 17.65,116 17.65,44"],
-    faces: [
-      { points: "80,80 142.35,44 142.35,116 80,152", depth: 0.42 }, // right
-      { points: "80,80 17.65,44 17.65,116 80,152", depth: 0.62 }, // left
-      { points: "80,80 17.65,44 80,8 142.35,44", depth: 0.9 }, // top (lit)
-    ],
-    edges: [
-      [80, 80, 17.65, 44],
+    outline: "80,8 142.35,44 142.35,116 80,152 17.65,116 17.65,44",
+    wireLines: [
       [80, 80, 142.35, 44],
+      [80, 80, 17.65, 44],
       [80, 80, 80, 152],
     ],
+    fills: [
+      { points: "80,8 142.35,44 80,80 17.65,44", opacity: 0.13 }, // top (lit)
+      { points: "142.35,44 142.35,116 80,152 80,80", opacity: 0.2 }, // right
+      { points: "17.65,44 80,80 80,152 17.65,116", opacity: 0.25 }, // left
+    ],
   },
-  // Octahedron — a diamond split by its two diagonals into four triangles.
+  // Octahedron from above — a diamond split by its two diagonals into four
+  // triangles meeting at the centre.
   d8: {
-    polygons: ["80,8 152,80 80,152 8,80"],
-    faces: [
-      { points: "80,80 152,80 80,152", depth: 0.35 }, // bottom-right
-      { points: "80,80 80,152 8,80", depth: 0.5 }, // bottom-left
-      { points: "80,8 152,80 80,80", depth: 0.62 }, // top-right
-      { points: "80,8 80,80 8,80", depth: 0.9 }, // top-left (lit)
+    outline: "80,8 152,80 80,152 8,80",
+    wireLines: [
+      [80, 8, 80, 152],
+      [8, 80, 152, 80],
     ],
-    edges: [
-      [80, 80, 80, 8],
-      [80, 80, 152, 80],
-      [80, 80, 80, 152],
-      [80, 80, 8, 80],
+    fills: [
+      { points: "8,80 80,8 80,80", opacity: 0.13 }, // top-left (lit)
+      { points: "80,8 152,80 80,80", opacity: 0.17 }, // top-right
+      { points: "152,80 80,152 80,80", opacity: 0.24 }, // bottom-right
+      { points: "80,152 8,80 80,80", opacity: 0.2 }, // bottom-left
     ],
   },
-  // Pentagonal trapezohedron — a bilaterally symmetric kite with a zig-zag girdle.
+  // Pentagonal trapezohedron — a bilaterally symmetric kite with a zig-zag girdle
+  // (top apex, two girdle points, a front-centre vertex) and five faces.
   d10: {
-    polygons: ["80,8 136,72 80,152 24,72"],
-    faces: [
-      { points: "80,152 108,88 136,72", depth: 0.38 }, // bottom-right
-      { points: "80,152 24,72 52,88", depth: 0.46 }, // bottom-left
-      { points: "80,72 108,88 80,152 52,88", depth: 0.56 }, // front-centre
-      { points: "80,8 80,72 108,88 136,72", depth: 0.64 }, // top-right
-      { points: "80,8 24,72 52,88 80,72", depth: 0.9 }, // top-left (lit)
-    ],
-    edges: [
+    outline: "80,8 136,72 80,152 24,72",
+    wireLines: [
       [80, 8, 80, 72],
       [24, 72, 52, 88],
       [52, 88, 80, 72],
@@ -141,110 +143,111 @@ export const SHAPES: Record<DieType, DieShape> = {
       [52, 88, 80, 152],
       [108, 88, 80, 152],
     ],
+    fills: [
+      { points: "80,8 24,72 52,88 80,72", opacity: 0.14 }, // top-left (lit)
+      { points: "80,8 80,72 108,88 136,72", opacity: 0.18 }, // top-right
+      { points: "80,72 108,88 80,152 52,88", opacity: 0.16 }, // front-centre
+      { points: "24,72 52,88 80,152", opacity: 0.22 }, // lower-left
+      { points: "136,72 108,88 80,152", opacity: 0.24 }, // lower-right
+    ],
   },
-  // Dodecahedron — a regular pentagon with an aligned inner pentagon: a central
-  // face ringed by five trapezoids.
+  // Dodecahedron — a regular pentagon (point up) with the full pentagram drawn
+  // inside. The colour wash is a five-blade pinwheel from the centre so the whole
+  // face is covered; the star reads through the wireframe lines on top.
   d12: {
-    polygons: ["80,8 148.5,57.8 122.3,138.2 37.7,138.2 11.5,57.8"],
-    faces: [
-      { points: "122.3,138.2 37.7,138.2 62.4,104.3 97.6,104.3", depth: 0.36 }, // bottom
-      { points: "148.5,57.8 122.3,138.2 97.6,104.3 108.5,70.7", depth: 0.46 }, // right
-      { points: "37.7,138.2 11.5,57.8 51.5,70.7 62.4,104.3", depth: 0.5 }, // bottom-left
-      { points: "80,50 108.5,70.7 97.6,104.3 62.4,104.3 51.5,70.7", depth: 0.6 }, // centre
-      { points: "80,8 148.5,57.8 108.5,70.7 80,50", depth: 0.7 }, // top-right
-      { points: "11.5,57.8 80,8 80,50 51.5,70.7", depth: 0.9 }, // top-left (lit)
+    outline: "80,8 148.5,57.8 122.3,138.2 37.7,138.2 11.5,57.8",
+    wireLines: [
+      [80, 8, 122.3, 138.2],
+      [80, 8, 37.7, 138.2],
+      [148.5, 57.8, 37.7, 138.2],
+      [148.5, 57.8, 11.5, 57.8],
+      [122.3, 138.2, 11.5, 57.8],
     ],
-    edges: [
-      [80, 50, 108.5, 70.7],
-      [108.5, 70.7, 97.6, 104.3],
-      [97.6, 104.3, 62.4, 104.3],
-      [62.4, 104.3, 51.5, 70.7],
-      [51.5, 70.7, 80, 50],
-      [80, 8, 80, 50],
-      [148.5, 57.8, 108.5, 70.7],
-      [122.3, 138.2, 97.6, 104.3],
-      [37.7, 138.2, 62.4, 104.3],
-      [11.5, 57.8, 51.5, 70.7],
+    fills: [
+      { points: "80,80 80,8 148.5,57.8", opacity: 0.15 }, // top-right blade (lit)
+      { points: "80,80 148.5,57.8 122.3,138.2", opacity: 0.2 }, // right blade
+      { points: "80,80 122.3,138.2 37.7,138.2", opacity: 0.24 }, // bottom blade
+      { points: "80,80 37.7,138.2 11.5,57.8", opacity: 0.2 }, // left blade
+      { points: "80,80 11.5,57.8 80,8", opacity: 0.16 }, // top-left blade
     ],
   },
-  // Icosahedron — the rerollgaming.com hexagon (exact mandated points): a top
-  // triangle, a four-facet equator band, and a bottom triangle. Faces above the
-  // equator face up (lighter), below face down (darker). No central hub.
+  // Icosahedron — the exact reroll hexagon and its verbatim internal lines: a
+  // vertical seam, two long diagonals, four corner spokes, and the top/bottom
+  // horizontals. Fills wash top → bottom (lightest → darkest), with two central
+  // wedges filling the spine the corner faces leave open.
   d20: {
-    polygons: ["80,8 152,44 152,116 80,152 8,116 8,44"],
-    faces: [
-      { points: "80,152 80,116 152,116", depth: 0.28 }, // floor-right
-      { points: "80,152 8,116 80,116", depth: 0.32 }, // floor-left
-      { points: "8,80 152,116 8,116", depth: 0.4 }, // band lower-left
-      { points: "8,80 152,80 152,116", depth: 0.46 }, // band lower-right
-      { points: "8,44 152,80 8,80", depth: 0.58 }, // band upper-left
-      { points: "8,44 152,44 152,80", depth: 0.7 }, // band upper-right
-      { points: "80,8 80,44 152,44", depth: 0.84 }, // roof-right
-      { points: "80,8 8,44 80,44", depth: 0.92 }, // roof-left (lit)
+    outline: "80,8 152,44 152,116 80,152 8,116 8,44",
+    wireLines: [
+      [80, 8, 80, 152],
+      [8, 44, 152, 116],
+      [152, 44, 8, 116],
+      [80, 8, 8, 116],
+      [80, 8, 152, 116],
+      [8, 44, 80, 152],
+      [152, 44, 80, 152],
+      [8, 44, 152, 44],
+      [8, 116, 152, 116],
     ],
-    edges: [
-      [80, 8, 80, 44], // roof seam
-      [8, 44, 152, 44], // top of band
-      [8, 44, 152, 80], // upper diagonal
-      [8, 80, 152, 80], // equator
-      [8, 80, 152, 116], // lower diagonal
-      [8, 116, 152, 116], // bottom of band
-      [80, 152, 80, 116], // floor seam
+    fills: [
+      { points: "80,8 152,44 8,44", opacity: 0.15 }, // top triangle (lit)
+      { points: "152,44 152,116 80,8", opacity: 0.2 }, // upper-right
+      { points: "8,44 80,8 8,116", opacity: 0.18 }, // upper-left
+      { points: "80,8 8,116 152,116", opacity: 0.1 }, // centre wedge (down)
+      { points: "80,152 8,44 152,44", opacity: 0.12 }, // centre wedge (up)
+      { points: "152,44 152,116 80,152", opacity: 0.22 }, // centre-right
+      { points: "8,44 8,116 80,152", opacity: 0.2 }, // centre-left
+      { points: "8,116 152,116 80,152", opacity: 0.25 }, // bottom triangle (darkest)
     ],
   },
-  // Rhombic triacontahedron — the same hexagon, more finely faceted than the d20:
-  // an inner hexagon of edge midpoints (split into two central faces by the
-  // equator) ringed by six corner triangles. No central hub.
+  // Rhombic triacontahedron — the same hexagon as the d20, but finely subdivided:
+  // an inner hexagon, six spokes out to the corners, a diagonal across each rim
+  // trapezoid, and three diagonals splitting the core. Many more, smaller facets.
   d30: {
-    polygons: ["80,8 152,44 152,116 80,152 8,116 8,44"],
-    faces: [
-      { points: "116,134 80,152 44,134", depth: 0.34 }, // corner bottom
-      { points: "152,80 152,116 116,134", depth: 0.38 }, // corner lower-right
-      { points: "8,80 152,80 116,134 44,134", depth: 0.42 }, // central lower
-      { points: "44,134 8,116 8,80", depth: 0.5 }, // corner lower-left
-      { points: "116,26 152,44 152,80", depth: 0.6 }, // corner upper-right
-      { points: "8,80 44,26 116,26 152,80", depth: 0.7 }, // central upper
-      { points: "44,26 80,8 116,26", depth: 0.82 }, // corner top
-      { points: "8,80 8,44 44,26", depth: 0.92 }, // corner upper-left (lit)
+    outline: "80,8 152,44 152,116 80,152 8,116 8,44",
+    wireLines: [
+      // inner hexagon
+      [80, 44, 116, 62],
+      [116, 62, 116, 98],
+      [116, 98, 80, 116],
+      [80, 116, 44, 98],
+      [44, 98, 44, 62],
+      [44, 62, 80, 44],
+      // inner → outer spokes
+      [80, 44, 80, 8],
+      [116, 62, 152, 44],
+      [116, 98, 152, 116],
+      [80, 116, 80, 152],
+      [44, 98, 8, 116],
+      [44, 62, 8, 44],
+      // rim-trapezoid diagonals
+      [80, 44, 152, 44],
+      [116, 62, 152, 116],
+      [116, 98, 80, 152],
+      [80, 116, 8, 116],
+      [44, 98, 8, 44],
+      [44, 62, 80, 8],
+      // core diagonals
+      [80, 44, 80, 116],
+      [116, 62, 44, 98],
+      [44, 62, 116, 98],
     ],
-    edges: [
-      [8, 80, 44, 26],
-      [44, 26, 116, 26],
-      [116, 26, 152, 80],
-      [152, 80, 116, 134],
-      [116, 134, 44, 134],
-      [44, 134, 8, 80],
-      [8, 80, 152, 80], // equator
+    fills: [
+      { points: "80,8 152,44 116,62 80,44", opacity: 0.15 }, // rim top (lit)
+      { points: "152,44 152,116 116,98 116,62", opacity: 0.2 }, // rim upper-right
+      { points: "152,116 80,152 80,116 116,98", opacity: 0.24 }, // rim lower-right
+      { points: "80,152 8,116 44,98 80,116", opacity: 0.22 }, // rim bottom-left
+      { points: "8,116 8,44 44,62 44,98", opacity: 0.18 }, // rim upper-left
+      { points: "8,44 80,8 80,44 44,62", opacity: 0.16 }, // rim top-left
+      { points: "80,44 116,62 116,98 80,116 44,98 44,62", opacity: 0.14 }, // core
     ],
   },
-  // The celestial d∞ renders a star sphere, not a polyhedron — no faces/edges.
+  // The celestial d∞ renders a star sphere, not a polyhedron — no wire/fills.
   dinf: {
-    polygons: [],
-    faces: [],
-    edges: [],
+    outline: "",
+    wireLines: [],
+    fills: [],
   },
 };
-
-// Off-white edge colour and weights: a subtle internal facet line and a slightly
-// bolder outer silhouette.
-export const DIE_STROKE = "#e8e4dc";
-export const EDGE_WEIGHT = 1.5;
-export const EDGE_OPACITY = 0.32;
-export const SILHOUETTE_WEIGHT = 2.0;
-export const SILHOUETTE_OPACITY = 0.45;
-
-// Resolve a face's solid colour: a shade of the signature colour between 40%
-// (darkest, facing away) and 90% (lightest, facing the light) brightness.
-// `bright` lifts it ~10% for the hover state.
-export function faceColor(hex: string, depth: number, bright = false): string {
-  const base = 0.4 + 0.5 * depth;
-  const f = bright ? base * 1.1 : base;
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const c = (v: number) => Math.min(255, Math.round(v * f));
-  return `rgb(${c(r)}, ${c(g)}, ${c(b)})`;
-}
 
 // ─── Celestial d∞ geometry ──────────────────────────────────────────────────
 // Stars and constellation lines for the celestial sphere, in the 160×160 viewBox
@@ -441,13 +444,15 @@ const D12_ANIM: AnimConfig = {
   hover: { scale: 1.08, ms: 300, ease: "ease-out", glowAlpha: "66" },
 };
 
-// d20 — THE benchmark (the rerollgaming.com feel). A balanced float: rotateX with
-// an off-phase rotateZ jitter. A smooth, weighted, satisfying tumble. A confident
-// scale overshoot + radial glow on a 20; the classic number shake on a 1.
+// d20 — THE benchmark (the rerollgaming.com feel). These float + tumble values
+// are the EXACT reroll-site numbers and must not be "improved": idle y 4 / rotateX
+// 2 / 2.5s; tumble launch 360/360, rotateZ ±25, scale 0.82, 0.35s power2.in; settle
+// back to 0 / scale 1, 0.4s back.out(2.5). A confident scale overshoot + radial
+// glow on a 20; the classic number shake on a 1.
 const D20_ANIM: AnimConfig = {
   color: "#c0392b",
-  float: { y: 8, duration: 3.5, rotateX: 2, jitter: { prop: "rotateZ", amount: 1, duration: 3.5, delay: 1.75 } },
-  tumble: { p1Dur: 0.5, p1Ease: "power2.in", rotateZ: 20, scale: 0.85, p2Dur: 0.55, p2Ease: "back.out(2)" },
+  float: { y: 4, duration: 2.5, rotateX: 2 },
+  tumble: { p1Dur: 0.35, p1Ease: "power2.in", rotateZ: 25, scale: 0.82, p2Dur: 0.4, p2Ease: "back.out(2.5)" },
   glowOpacity: 0.5,
   glowScale: 1.4,
   celebrate: [

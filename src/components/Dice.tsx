@@ -6,14 +6,11 @@ import {
   SHAPES,
   maxFor,
   animFor,
-  faceColor,
   CELESTIAL_STARS,
   CELESTIAL_LINES,
-  DIE_STROKE,
-  EDGE_WEIGHT,
-  EDGE_OPACITY,
-  SILHOUETTE_WEIGHT,
-  SILHOUETTE_OPACITY,
+  WIRE_COLOR,
+  WIRE_OUTER,
+  WIRE_INNER,
   type DieType,
   type TweenStep,
 } from "@/lib/dice";
@@ -94,11 +91,12 @@ export default function Dice({ dieType, onRoll }: Props) {
     if (shadowRef.current) gsap.killTweensOf(shadowRef.current);
   }, []);
 
-  // The idle float, fully per-die: a Y bob (±y/2 around rest) plus the die's own
-  // primary rotations, easing up from wherever it is (no snap) and then looping.
-  // The contact shadow rides the SAME timeline, inverted — wide+faint when the
-  // die is high, tight+dark when it's low — so the two are perfectly in sync. An
-  // optional off-phase jitter runs as its own independent tween on top.
+  // The idle float, fully per-die: rest sits at y 0 (the high point) and the die
+  // bobs DOWN to +y and back (the reroll d20 does exactly this — gsap.to({y:4})),
+  // plus the die's own primary rotations. It eases to rest first (no snap) and
+  // then loops. The contact shadow rides the SAME timeline, inverted — wide+faint
+  // when the die is high, tight+dark when it's low — so the two are perfectly in
+  // sync. An optional off-phase jitter runs as its own independent tween on top.
   const startIdle = useCallback(() => {
     const body = bodyRef.current;
     if (!body) return;
@@ -107,7 +105,7 @@ export default function Dice({ dieType, onRoll }: Props) {
     const shadow = shadowRef.current;
     if (shadow) gsap.set(shadow, { scaleX: 1.25, opacity: 0.06 });
     gsap.to(body, {
-      y: -f.y / 2,
+      y: 0,
       rotateX: 0,
       rotateZ: 0,
       rotateY: 0,
@@ -116,7 +114,7 @@ export default function Dice({ dieType, onRoll }: Props) {
       onComplete: () => {
         const tl = gsap.timeline({ repeat: -1, yoyo: true });
         const bodyTo: gsap.TweenVars = {
-          y: f.y / 2,
+          y: f.y,
           duration: f.duration,
           ease: "sine.inOut",
         };
@@ -368,8 +366,11 @@ export default function Dice({ dieType, onRoll }: Props) {
     }
 
     const { tumble } = cfg;
-    // Phase 1 — a weighted launch: one full spin + a gentle squish (and a reset
-    // of the resting Y so the celebration/failure starts from a known baseline).
+    // Two-phase tumble, exactly the reroll d20 shape: a weighted launch spinning
+    // rotateX/Y a full 360 with a squish (phase 1), then a settle that eases
+    // rotateX/Y/Z back to 0 and scale back to 1 with an overshoot (phase 2). Y is
+    // reset to its 0 rest in the launch so the celebration/failure has a known
+    // baseline.
     gsap.to(body, {
       rotateX: 360,
       rotateY: 360,
@@ -379,13 +380,11 @@ export default function Dice({ dieType, onRoll }: Props) {
       duration: tumble.p1Dur,
       ease: tumble.p1Ease,
       onComplete: () => {
-        // The full spins (360 ≡ 0) are reset instantly so the settle doesn't
-        // unwind them — there's no jump, and phase 2 just eases the squish and
-        // twist out with a gentle overshoot.
-        gsap.set(body, { rotateX: 0, rotateY: 0 });
         gsap.to(body, {
-          scale: 1,
+          rotateX: 0,
+          rotateY: 0,
           rotateZ: 0,
+          scale: 1,
           duration: tumble.p2Dur,
           ease: tumble.p2Ease,
           onComplete: () => {
@@ -617,49 +616,38 @@ export default function Dice({ dieType, onRoll }: Props) {
               </>
             ) : (
               <>
-                {/* Solid, shaded facets (a same-colour hairline kills seams). */}
-                {shape.faces.map((f, i) => {
-                  const fc = faceColor(color, f.depth, hovered);
-                  return (
-                    <polygon
-                      key={i}
-                      points={f.points}
-                      fill={fc}
-                      stroke={fc}
-                      strokeWidth={0.75}
-                      strokeLinejoin="round"
-                      style={{
-                        transition: `fill ${transMs}ms ease-out, stroke ${transMs}ms ease-out`,
-                      }}
-                    />
-                  );
-                })}
-                {/* Internal facet edges — subtle, each drawn once. */}
-                {shape.edges.map(([x1, y1, x2, y2], i) => (
+                {/* Layer 1 (back) — translucent signature-colour fills that add a
+                    subtle depth wash behind the wireframe. */}
+                {shape.fills.map((f, i) => (
+                  <polygon
+                    key={`f${i}`}
+                    points={f.points}
+                    fill={color}
+                    fillOpacity={f.opacity}
+                    stroke="none"
+                  />
+                ))}
+                {/* Layer 2 (front) — the wireframe, always visible on top: the
+                    light internal triangulation, then the heavy outer silhouette. */}
+                {shape.wireLines.map(([x1, y1, x2, y2], i) => (
                   <line
-                    key={`e${i}`}
+                    key={`w${i}`}
                     x1={x1}
                     y1={y1}
                     x2={x2}
                     y2={y2}
-                    stroke={DIE_STROKE}
-                    strokeWidth={EDGE_WEIGHT}
-                    strokeOpacity={EDGE_OPACITY}
+                    stroke={WIRE_COLOR}
+                    strokeWidth={WIRE_INNER}
                     strokeLinecap="round"
                   />
                 ))}
-                {/* Outer silhouette. */}
-                {shape.polygons.map((points, i) => (
-                  <polygon
-                    key={`o${i}`}
-                    points={points}
-                    fill="none"
-                    stroke={DIE_STROKE}
-                    strokeWidth={SILHOUETTE_WEIGHT}
-                    strokeOpacity={SILHOUETTE_OPACITY}
-                    strokeLinejoin="round"
-                  />
-                ))}
+                <polygon
+                  points={shape.outline}
+                  fill="none"
+                  stroke={WIRE_COLOR}
+                  strokeWidth={WIRE_OUTER}
+                  strokeLinejoin="round"
+                />
               </>
             )}
           </svg>
