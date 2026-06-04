@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <main className="flex flex-col h-[100dvh] overflow-hidden select-none">
       <header className="flex items-center justify-between px-5 py-4 shrink-0">
-        <span className="font-sans font-bold text-[14px] tracking-[0.2em] uppercase text-[var(--light)]">
+        <span className="font-sans font-bold text-[14px] tracking-[0.2em] uppercase text-[var(--ink)]">
           Crit
         </span>
         <ShareCard roll={roll} />

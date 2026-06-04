@@ -4,7 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: "#f5f3ee",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Crit",
   },
   openGraph: {

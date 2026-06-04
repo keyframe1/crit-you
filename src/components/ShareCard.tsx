@@ -61,7 +61,7 @@ export default function ShareCard({ roll }: { roll: Roll | null }) {
         onClick={handleShare}
         disabled={!roll}
         aria-label="Share roll"
-        className="p-2 -m-2 text-[var(--light)] hover:text-[var(--accent)] transition-colors duration-200 disabled:opacity-25 disabled:hover:text-[var(--light)]"
+        className="p-2 -m-2 text-[var(--ink)] hover:text-[var(--accent)] transition-colors duration-200 disabled:opacity-25 disabled:hover:text-[var(--ink)]"
       >
         <Share2 size={18} strokeWidth={1.75} />
       </button>
@@ -73,7 +73,12 @@ export default function ShareCard({ roll }: { roll: Roll | null }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 font-mono text-[12px] tracking-wide px-4 py-2 rounded-lg bg-[#161614] text-[var(--light)] border border-white/10 shadow-lg"
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 font-mono text-[12px] tracking-wide px-4 py-2 rounded-lg text-[var(--ink)]"
+            style={{
+              background: "#ffffff",
+              border: "1px solid rgba(0,0,0,0.08)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            }}
           >
             Copied to clipboard
           </motion.div>

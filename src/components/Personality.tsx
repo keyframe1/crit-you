@@ -19,16 +19,26 @@ export default function Personality({ roll }: { roll: Roll | null }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="relative max-w-[280px] sm:max-w-[340px] rounded-xl border border-white/[0.06] bg-[#161616] px-5 py-3"
+            className="relative max-w-[280px] sm:max-w-[340px] rounded-xl px-5 py-3"
+            style={{
+              background: "#ffffff",
+              border: "1px solid rgba(0,0,0,0.08)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            }}
           >
-            <p className="font-mono text-[13px] leading-relaxed text-[var(--light)] text-center">
+            <p className="font-mono text-[13px] leading-relaxed text-center text-[var(--ink)]">
               {roll.line}
             </p>
             {/* Notch: a small rotated square whose two lower edges carry the
                 bubble's border, so it reads as a triangle pointing at the die. */}
             <span
               aria-hidden
-              className="absolute left-1/2 -bottom-[5px] h-[10px] w-[10px] -translate-x-1/2 rotate-45 rounded-[2px] border-b border-r border-white/[0.06] bg-[#161616]"
+              className="absolute left-1/2 -bottom-[5px] h-[10px] w-[10px] -translate-x-1/2 rotate-45 rounded-[2px]"
+              style={{
+                background: "#ffffff",
+                borderBottom: "1px solid rgba(0,0,0,0.08)",
+                borderRight: "1px solid rgba(0,0,0,0.08)",
+              }}
             />
           </motion.div>
         )}

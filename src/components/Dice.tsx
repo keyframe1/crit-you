@@ -63,6 +63,10 @@ export default function Dice({ dieType, onRoll }: Props) {
   const starsRef = useRef<SVGGElement>(null);
   const linesRef = useRef<SVGGElement>(null);
   const twinkles = useRef<gsap.core.Tween[]>([]);
+  // The idle float timeline (body + contact shadow, perfectly in sync) and its
+  // independent off-phase jitter tween, kept so we can tear both down cleanly.
+  const idleTl = useRef<gsap.core.Timeline | null>(null);
+  const jitterTween = useRef<gsap.core.Tween | null>(null);
   // The shape currently drawn. Lags `dieType` so we can fade the old die out
   // before swapping the SVG and fading the new one in.
   const [shapeType, setShapeType] = useState<DieType>(dieType);
@@ -79,59 +83,73 @@ export default function Dice({ dieType, onRoll }: Props) {
     dieRef.current = dieType;
   }, [dieType]);
 
-  // The idle float, tuned per die: a slow Y bob (±y/2 around rest), slight
-  // rotateX, a rotateZ sway, and a rotateY tilt. It eases up from wherever the
-  // die currently is (no snap), then loops. The contact shadow runs on the same
-  // clock, inverted, so it widens/fades as the die rises.
+  // Tear down every idle animation (float timeline, jitter, and any stray
+  // tweens) on the body and the contact shadow.
+  const killIdle = useCallback(() => {
+    idleTl.current?.kill();
+    idleTl.current = null;
+    jitterTween.current?.kill();
+    jitterTween.current = null;
+    if (bodyRef.current) gsap.killTweensOf(bodyRef.current);
+    if (shadowRef.current) gsap.killTweensOf(shadowRef.current);
+  }, []);
+
+  // The idle float, fully per-die: a Y bob (±y/2 around rest) plus the die's own
+  // primary rotations, easing up from wherever it is (no snap) and then looping.
+  // The contact shadow rides the SAME timeline, inverted — wide+faint when the
+  // die is high, tight+dark when it's low — so the two are perfectly in sync. An
+  // optional off-phase jitter runs as its own independent tween on top.
   const startIdle = useCallback(() => {
     const body = bodyRef.current;
     if (!body) return;
-    const { y, rotateX, rotateZ, rotateY, duration } = animFor(
-      dieRef.current
-    ).float;
+    killIdle();
+    const f = animFor(dieRef.current).float;
+    const shadow = shadowRef.current;
+    if (shadow) gsap.set(shadow, { scaleX: 1.25, opacity: 0.06 });
     gsap.to(body, {
-      y: -y / 2,
+      y: -f.y / 2,
       rotateX: 0,
       rotateZ: 0,
       rotateY: 0,
       duration: 0.6,
       ease: "sine.out",
       onComplete: () => {
-        gsap.to(body, {
-          y: y / 2,
-          rotateX,
-          rotateZ,
-          rotateY,
-          duration,
+        const tl = gsap.timeline({ repeat: -1, yoyo: true });
+        const bodyTo: gsap.TweenVars = {
+          y: f.y / 2,
+          duration: f.duration,
           ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-        });
-        const shadow = shadowRef.current;
+        };
+        if (f.rotateX != null) bodyTo.rotateX = f.rotateX;
+        if (f.rotateY != null) bodyTo.rotateY = f.rotateY;
+        if (f.rotateZ != null) bodyTo.rotateZ = f.rotateZ;
+        tl.to(body, bodyTo, 0);
         if (shadow) {
-          gsap.set(shadow, { scaleX: 1.2, opacity: 0.15 });
-          gsap.to(shadow, {
-            scaleX: 0.8,
-            opacity: 0.35,
-            duration,
+          tl.to(
+            shadow,
+            { scaleX: 0.75, opacity: 0.18, duration: f.duration, ease: "sine.inOut" },
+            0
+          );
+        }
+        idleTl.current = tl;
+        if (f.jitter) {
+          jitterTween.current = gsap.to(body, {
+            [f.jitter.prop]: f.jitter.amount,
+            duration: f.jitter.duration,
             ease: "sine.inOut",
             yoyo: true,
             repeat: -1,
+            delay: f.jitter.delay ?? 0,
           });
         }
       },
     });
-  }, []);
+  }, [killIdle]);
 
   useEffect(() => {
     startIdle();
-    const body = bodyRef.current;
-    const shadow = shadowRef.current;
-    return () => {
-      if (body) gsap.killTweensOf(body);
-      if (shadow) gsap.killTweensOf(shadow);
-    };
-  }, [startIdle]);
+    return () => killIdle();
+  }, [startIdle, killIdle]);
 
   // Constant asynchronous star twinkle + a slow constellation-line pulse, for
   // the celestial die only. Restartable so the celebration/failure can take
@@ -187,11 +205,20 @@ export default function Dice({ dieType, onRoll }: Props) {
   // Reveal the result number inside the die — it fades in at its final size,
   // never scaling from larger. Nat max pulses once; nat min fades slower/dimmer.
   const revealNumber = useCallback(
-    (value: number, isMax: boolean, isMin: boolean, accent: string) => {
+    (
+      value: number,
+      isMax: boolean,
+      isMin: boolean,
+      accent: string,
+      normalColor: string
+    ) => {
       const el = numberRef.current;
       if (!el) return;
       el.textContent = String(value);
-      el.style.fill = isMax ? accent : isMin ? "#555555" : "#e8e4dc";
+      // On the cream page the number is dark ink; nat max takes the signature
+      // accent, nat min a faint warm grey. The celestial die passes a light
+      // normal colour since its number sits on a dark sphere.
+      el.style.fill = isMax ? accent : isMin ? "#aaa8a0" : normalColor;
       el.style.filter = isMax ? `drop-shadow(0 0 8px ${accent}99)` : "none";
 
       gsap.killTweensOf(el);
@@ -224,8 +251,7 @@ export default function Dice({ dieType, onRoll }: Props) {
     const body = bodyRef.current;
     if (!body) return;
 
-    gsap.killTweensOf(body);
-    if (shadowRef.current) gsap.killTweensOf(shadowRef.current);
+    killIdle();
     if (numberRef.current) {
       gsap.killTweensOf(numberRef.current);
       gsap.set(numberRef.current, { opacity: 0 });
@@ -252,7 +278,7 @@ export default function Dice({ dieType, onRoll }: Props) {
         );
       },
     });
-  }, [dieType, startIdle]);
+  }, [dieType, startIdle, killIdle]);
 
   // The celestial die rolls with a slow majestic spin instead of a tumble.
   const rollCelestial = useCallback(
@@ -262,7 +288,7 @@ export default function Dice({ dieType, onRoll }: Props) {
       body.style.filter = "blur(1px)"; // stars blur during the spin
       gsap.to(body, {
         rotateZ: "+=720",
-        duration: 1.2,
+        duration: 1.4,
         ease: "power2.inOut",
         onComplete: () => {
           body.style.filter = "";
@@ -275,7 +301,8 @@ export default function Dice({ dieType, onRoll }: Props) {
             ? Array.from(starsRef.current.children)
             : [];
           if (num >= max) {
-            // All stars flash, constellations flare, a lens-flare pulses out.
+            // Cosmic event: all stars flash to max, constellations flare, and a
+            // ring of light expands outward from the die.
             twinkles.current.forEach((t) => t.kill());
             twinkles.current = [];
             gsap.to(stars, { opacity: 1, duration: 0.2, ease: "power2.out" });
@@ -284,21 +311,21 @@ export default function Dice({ dieType, onRoll }: Props) {
             if (flareRef.current)
               gsap.fromTo(
                 flareRef.current,
-                { opacity: 0.7, scale: 0.5 },
-                { opacity: 0, scale: 1.7, duration: 0.6, ease: "power2.out" }
+                { opacity: 0.4, scale: 0.5 },
+                { opacity: 0, scale: 2.0, duration: 1.0, ease: "power2.out" }
               );
-            gsap.delayedCall(0.5, () => {
+            gsap.delayedCall(1.0, () => {
               startTwinkle();
               finish();
             });
           } else if (num <= 1) {
-            // The universe gives up: stars dim, constellations go dark.
+            // The cosmos goes dark: stars dim, constellations disappear.
             twinkles.current.forEach((t) => t.kill());
             twinkles.current = [];
-            gsap.to(stars, { opacity: 0.15, duration: 0.4, ease: "power2.out" });
+            gsap.to(stars, { opacity: 0.1, duration: 0.4, ease: "power2.out" });
             if (linesRef.current)
-              gsap.to(linesRef.current, { opacity: 0.04, duration: 0.4 });
-            gsap.delayedCall(1, () => {
+              gsap.to(linesRef.current, { opacity: 0, duration: 0.4 });
+            gsap.delayedCall(1.2, () => {
               startTwinkle();
               finish();
             });
@@ -307,9 +334,9 @@ export default function Dice({ dieType, onRoll }: Props) {
           }
         },
       });
-      gsap.delayedCall(0.6, () => {
+      gsap.delayedCall(0.7, () => {
         onRollRef.current(num);
-        revealNumber(num, num >= max, num <= 1, accent);
+        revealNumber(num, num >= max, num <= 1, accent, "#e8e4dc");
       });
     },
     [startIdle, startTwinkle, revealNumber]
@@ -321,30 +348,34 @@ export default function Dice({ dieType, onRoll }: Props) {
 
     const body = bodyRef.current;
     const glow = glowRef.current;
+    const num = numberRef.current;
     const max = maxFor(dieType);
-    const num = Math.floor(Math.random() * max) + 1;
+    const value = Math.floor(Math.random() * max) + 1;
     const cfg = animFor(dieType);
-    const accent = dieType === "dinf" ? "#94b8ff" : "#c0392b";
+    const accent = "#c0392b";
+    const isMax = value >= max;
+    const isMin = value <= 1;
 
-    gsap.killTweensOf(body);
-    if (shadowRef.current) gsap.killTweensOf(shadowRef.current);
-    if (numberRef.current) {
-      gsap.killTweensOf(numberRef.current);
-      gsap.set(numberRef.current, { opacity: 0 });
+    killIdle();
+    if (num) {
+      gsap.killTweensOf(num);
+      gsap.set(num, { opacity: 0 });
     }
 
     if (dieType === "dinf") {
-      rollCelestial(num, max, accent);
+      rollCelestial(value, max, "#94b8ff");
       return;
     }
 
     const { tumble } = cfg;
-    // Phase 1 — a weighted launch: one full spin + a gentle squish.
+    // Phase 1 — a weighted launch: one full spin + a gentle squish (and a reset
+    // of the resting Y so the celebration/failure starts from a known baseline).
     gsap.to(body, {
       rotateX: 360,
       rotateY: 360,
       rotateZ: gsap.utils.random(-tumble.rotateZ, tumble.rotateZ),
       scale: tumble.scale,
+      y: 0,
       duration: tumble.p1Dur,
       ease: tumble.p1Ease,
       onComplete: () => {
@@ -362,10 +393,43 @@ export default function Dice({ dieType, onRoll }: Props) {
               startIdle();
               setRolling(false);
             };
-            if (num >= max && cfg.celebrate.length) {
-              playSequence(body, cfg.celebrate, finish);
-            } else if (num <= 1 && cfg.fail.length) {
-              playSequence(body, cfg.fail, finish);
+            // Per-die celebration / failure, played once the tumble has settled.
+            if (isMax) {
+              // Radial glow (d12 doubled, d20 confident); d10 tints its number.
+              if ((dieType === "d12" || dieType === "d20") && glow) {
+                gsap.fromTo(
+                  glow,
+                  { opacity: cfg.glowOpacity, scale: 0.8 },
+                  { opacity: 0, scale: cfg.glowScale, duration: 0.8, ease: "power2.out" }
+                );
+              }
+              if (dieType === "d10" && num) {
+                num.style.fill = "#27ae60"; // clinical green acknowledgment
+                gsap.delayedCall(0.5, () => {
+                  if (numberRef.current) numberRef.current.style.fill = accent;
+                });
+              }
+              if (cfg.celebrate.length) playSequence(body, cfg.celebrate, finish);
+              else finish();
+            } else if (isMin) {
+              if (dieType === "d10" && num) {
+                // Glitching calculator: the number stutters opacity five times.
+                gsap.to(num, {
+                  keyframes: { opacity: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1] },
+                  duration: 0.4,
+                  ease: "none",
+                });
+              }
+              if (dieType === "d20" && num) {
+                // The classic shake: the result number jitters in X, 3 cycles.
+                gsap.fromTo(
+                  num,
+                  { x: 0 },
+                  { keyframes: { x: [0, -4, 4, -4, 4, -4, 4, 0] }, duration: 0.4, ease: "none" }
+                );
+              }
+              if (cfg.fail.length) playSequence(body, cfg.fail, finish);
+              else finish();
             } else {
               finish();
             }
@@ -375,18 +439,10 @@ export default function Dice({ dieType, onRoll }: Props) {
     });
 
     gsap.delayedCall(0.4, () => {
-      onRollRef.current(num);
-      revealNumber(num, num >= max, num <= 1, accent);
+      onRollRef.current(value);
+      revealNumber(value, isMax, isMin, accent, "#1a1a18");
     });
-
-    if (num === max && glow) {
-      gsap.fromTo(
-        glow,
-        { opacity: cfg.glowOpacity, scale: 0.8 },
-        { opacity: 0, scale: 1.3, duration: 0.8, ease: "power2.out" }
-      );
-    }
-  }, [rolling, dieType, startIdle, revealNumber, rollCelestial]);
+  }, [rolling, dieType, startIdle, killIdle, revealNumber, rollCelestial]);
 
   // Hover enter: set state, fire the d4 twitch, pulse the celestial constellations.
   const onEnter = useCallback(() => {
@@ -452,18 +508,20 @@ export default function Dice({ dieType, onRoll }: Props) {
         perspective: "600px",
       }}
     >
-      {/* Floating contact shadow, ~20px below the die. */}
+      {/* Floating contact shadow — an ellipse 45% of the die's width, sitting
+          ~15px below it, that the idle-float timeline widens/fades as the die
+          rises and tightens/darkens as it falls. */}
       <div
         className="absolute left-1/2 pointer-events-none"
         style={{
-          bottom: "-6%",
-          width: "50%",
-          height: "8%",
+          bottom: "-15px",
+          width: "45%",
+          height: "12px",
           zIndex: 0,
           transform: hovered
             ? "translateX(-50%) scaleX(1.15)"
             : "translateX(-50%) scaleX(1)",
-          opacity: hovered ? 0.7 : 1,
+          opacity: hovered ? 0.8 : 1,
           transition: `transform ${transMs}ms ease-out, opacity ${transMs}ms ease-out`,
         }}
       >
@@ -473,7 +531,7 @@ export default function Dice({ dieType, onRoll }: Props) {
           style={{
             background:
               "radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%)",
-            opacity: 0.2,
+            opacity: 0.12,
             transformOrigin: "center",
           }}
         />
@@ -522,13 +580,14 @@ export default function Dice({ dieType, onRoll }: Props) {
           >
             {isCelestial ? (
               <>
-                {/* Transparent celestial sphere with constellations inside. */}
+                {/* A dark window into space, so the stars read against the
+                    cream page — the celestial die is space on a light surface. */}
                 <circle
                   cx="80"
                   cy="80"
                   r="70"
-                  fill="#080818"
-                  fillOpacity={0.7}
+                  fill="#0a0a14"
+                  fillOpacity={0.9}
                 />
                 <g ref={linesRef} style={{ opacity: 0.2 }}>
                   {CELESTIAL_LINES.map(([x1, y1, x2, y2], i) => (

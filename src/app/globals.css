@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0a0a;
+  --color-bg: #f5f3ee;
+  --color-ink: #1a1a18;
   --color-accent: #c0392b;
   --color-mid: #666660;
   --color-light: #aaa8a0;
@@ -11,7 +12,8 @@
 }
 
 :root {
-  --bg: #0a0a0a;
+  --bg: #f5f3ee;
+  --ink: #1a1a18;
   --accent: #c0392b;
   --mid: #666660;
   --light: #aaa8a0;
@@ -24,10 +26,20 @@ body {
 
 body {
   background: var(--bg);
-  color: var(--light);
+  color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+}
+
+/* Hide the horizontal scrollbar on the dice selector while keeping it
+   scrollable / draggable on overflow. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

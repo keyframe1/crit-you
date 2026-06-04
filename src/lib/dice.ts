@@ -293,8 +293,10 @@ export const CELESTIAL_LINES: [number, number, number, number][] = [
 ];
 
 // ─── Per-die animation character ────────────────────────────────────────────
-// Every die runs the same engine; each is tuned to read as a character. All the
-// timings live here as data; Dice.tsx is a generic interpreter of these configs.
+// Every die is its OWN complete character. There is no shared FLOAT/TUMBLE base
+// any more — each config below is written out in full so a die's float, tumble,
+// celebration, and failure can be read (and tuned) as one self-contained
+// personality. Dice.tsx is the generic interpreter that plays these configs.
 
 export interface TweenStep {
   to?: Record<string, number>;
@@ -304,6 +306,34 @@ export interface TweenStep {
   duration?: number;
   ease?: string;
   delay?: number;
+}
+
+// Idle float. The main timeline bobs Y (between -y/2 and +y/2) and eases the
+// listed primary rotations from 0 → peak; the contact shadow rides the SAME
+// timeline inverted. `jitter` is an independent, off-phase secondary oscillation
+// (the d4's nervous twitch, the d20's offset sway) on a single axis.
+export interface FloatConfig {
+  y: number;
+  duration: number;
+  rotateX?: number;
+  rotateY?: number;
+  rotateZ?: number;
+  jitter?: {
+    prop: "rotateZ" | "rotateX";
+    amount: number;
+    duration: number;
+    delay?: number;
+  };
+}
+
+// Two-phase roll tumble: a launch (p1) then a settle with a gentle overshoot.
+export interface TumbleConfig {
+  p1Dur: number;
+  p1Ease: string;
+  rotateZ: number; // ± random twist range during the launch
+  scale: number; // squish at the bottom of the launch
+  p2Dur: number;
+  p2Ease: string;
 }
 
 // A distinct hover response per die (desktop hover / touch-hold).
@@ -318,166 +348,149 @@ export interface HoverConfig {
 
 export interface AnimConfig {
   color: string; // signature colour: face shades, glow, hover drop-shadow
-  // Idle float — a slow, visible Y bob (±y/2 around rest), slight rotateX, a
-  // rotateZ sway, and a rotateY tilt that shifts the facets in perspective.
-  float: {
-    y: number;
-    rotateX: number;
-    rotateZ: number;
-    rotateY: number;
-    duration: number;
-  };
-  // Two-phase roll tumble: a launch (p1) then a settle with a gentle overshoot.
-  tumble: {
-    p1Dur: number;
-    p1Ease: string;
-    rotateZ: number;
-    scale: number;
-    p2Dur: number;
-    p2Ease: string;
-  };
-  glowOpacity: number; // peak opacity of the nat-max radial glow
+  float: FloatConfig;
+  tumble: TumbleConfig;
+  glowOpacity: number; // peak opacity of the nat-max radial glow (d12/d20)
+  glowScale: number; // end scale of that glow's expand
   celebrate: TweenStep[]; // body flourish on a natural max (empty = none)
   fail: TweenStep[]; // body flourish on a natural 1 (empty = none)
   hover: HoverConfig;
 }
 
-// Shared idle-float values — slow, with a clearly visible bob, sway, and tilt.
-const FLOAT = { y: 10, rotateX: 3, rotateZ: 1.5, rotateY: 2, duration: 3.5 };
-
-// Shared roll tumble — a weighted launch + gentle settle (matching the
-// rerollgaming.com feel): a calmer spin and a softer overshoot than before.
-const TUMBLE = {
-  p1Dur: 0.5,
-  p1Ease: "power2.in",
-  rotateZ: 25,
-  scale: 0.85,
-  p2Dur: 0.55,
-  p2Ease: "back.out(2)",
-};
-
-export const DEFAULT_ANIM: AnimConfig = {
-  color: "#c0392b",
-  float: { ...FLOAT },
-  tumble: { ...TUMBLE },
-  glowOpacity: 0.7,
-  celebrate: [
-    { to: { scale: 1.12 }, duration: 0.3, ease: "back.out(3)" },
-    { to: { scale: 1 }, duration: 0.4, ease: "power2.out" },
-  ],
-  fail: [],
-  // The d20: confident, with the drop-shadow shifting to a brighter crimson.
-  hover: {
-    scale: 1.03,
-    ms: 400,
-    ease: "ease-out",
-    glowAlpha: "40",
-    shadowColor: "#e74c3c",
-  },
-};
-
+// d4 — fast, twitchy, nervous. Quick float with an off-rhythm rotateZ jitter; a
+// sharp caltrop snap; a triple-vibrate celebration; a sulking tilt on a 1.
 const D4_ANIM: AnimConfig = {
   color: "#c0392b",
-  float: { ...FLOAT },
-  tumble: { ...TUMBLE },
-  glowOpacity: 0.7,
+  float: { y: 8, duration: 2.2, jitter: { prop: "rotateZ", amount: 0.5, duration: 1.1 } },
+  tumble: { p1Dur: 0.3, p1Ease: "power3.in", rotateZ: 35, scale: 0.85, p2Dur: 0.35, p2Ease: "back.out(2)" },
+  glowOpacity: 0,
+  glowScale: 1.3,
   celebrate: [
-    {
-      keyframes: { scale: [1, 1.15, 1, 1.1, 1] },
-      duration: 0.6,
-      ease: "power1.inOut",
-    },
+    { keyframes: { scale: [1, 1.06, 1, 1.04, 1] }, duration: 0.5, ease: "power1.inOut" },
   ],
   fail: [
-    { to: { rotateZ: 15 }, duration: 0.6, ease: "elastic.out(1, 0.4)" },
-    { to: { rotateZ: 0 }, duration: 0.4, delay: 1, ease: "power2.inOut" },
+    { to: { rotateZ: 12 }, duration: 0.25, ease: "power3.out" },
+    { to: { rotateZ: 0 }, duration: 0.4, delay: 0.8, ease: "power2.inOut" },
   ],
-  // Nervous energy: a quick twitch on hover.
   hover: { scale: 1.04, ms: 300, ease: "ease-out", glowAlpha: "33", twitch: true },
 };
 
+// d6 — slow, steady, boring and reliable. No rotation at all; an even tumble; a
+// restrained golf-clap on a 6; and on a 1, nothing whatsoever.
 const D6_ANIM: AnimConfig = {
   color: "#8a8880",
-  float: { ...FLOAT },
-  tumble: { ...TUMBLE },
-  glowOpacity: 0.7,
+  float: { y: 5, duration: 4.0 },
+  tumble: { p1Dur: 0.5, p1Ease: "power1.in", rotateZ: 10, scale: 0.85, p2Dur: 0.5, p2Ease: "power2.out" },
+  glowOpacity: 0,
+  glowScale: 1.3,
   celebrate: [
-    { keyframes: { scale: [1, 1.08, 1] }, duration: 0.4, ease: "power2.inOut" },
+    { keyframes: { scale: [1, 1.03, 1] }, duration: 0.3, ease: "power2.inOut" },
   ],
   fail: [],
-  // It barely reacts.
   hover: { scale: 1.02, ms: 300, ease: "ease-out", glowAlpha: "22" },
 };
 
+// d8 — eager, bouncy, friendly. A medium float with an eager rotateX lean; an
+// over-bouncing tumble; a happy-puppy double hop on an 8; a nervous wobble on a 1.
 const D8_ANIM: AnimConfig = {
   color: "#2a9d8f",
-  float: { ...FLOAT },
-  tumble: { ...TUMBLE, p2Ease: "back.out(3)" },
-  glowOpacity: 0.7,
+  float: { y: 7, duration: 3.0, rotateX: 2 },
+  tumble: { p1Dur: 0.45, p1Ease: "power2.in", rotateZ: 20, scale: 0.85, p2Dur: 0.5, p2Ease: "back.out(3)" },
+  glowOpacity: 0,
+  glowScale: 1.3,
   celebrate: [
-    { keyframes: { y: [0, -20, 0, -10, 0] }, duration: 0.6, ease: "power2.out" },
+    { keyframes: { y: [0, -15, 0, -15, 0] }, duration: 0.5, ease: "power2.out" },
   ],
   fail: [
-    { to: { scale: 0.95 }, duration: 0.3, ease: "power2.out" },
-    { to: { scale: 1 }, duration: 0.3, ease: "power2.out" },
+    { keyframes: { rotateZ: [0, -4, 4, -4, 4, -4, 4, -4, 4, 0] }, duration: 0.5, ease: "sine.inOut" },
   ],
-  // Eager: a friendly, fast lean-in.
   hover: { scale: 1.05, ms: 200, ease: "ease-out", glowAlpha: "33" },
 };
 
+// d10 — precise, mechanical, clinical. Clean Y-only bob; a controlled tumble with
+// minimal overshoot. Its celebration and failure live on the result NUMBER (a
+// green tint / a glitchy flicker), so the body steps here are intentionally empty.
 const D10_ANIM: AnimConfig = {
   color: "#27ae60",
-  float: { ...FLOAT },
-  tumble: { ...TUMBLE },
-  glowOpacity: 0.7,
-  celebrate: [
-    { keyframes: { scale: [1, 1.12, 1] }, duration: 0.8, ease: "power2.inOut" },
-  ],
+  float: { y: 6, duration: 3.2 },
+  tumble: { p1Dur: 0.45, p1Ease: "power2.in", rotateZ: 8, scale: 0.88, p2Dur: 0.45, p2Ease: "back.out(1.5)" },
+  glowOpacity: 0,
+  glowScale: 1.3,
+  celebrate: [],
   fail: [],
-  // Precise and mechanical: an exact, linear scale.
   hover: { scale: 1.04, ms: 250, ease: "linear", glowAlpha: "33" },
 };
 
+// d12 — dramatic, attention-seeking. A big sweeping float with a rotateZ sway; a
+// theatrical, slow tumble with a deep squish; a huge held pulse + doubled glow on
+// a 12; a deflated freeze-then-sink on a 1.
 const D12_ANIM: AnimConfig = {
   color: "#d4a843",
-  float: { ...FLOAT },
-  tumble: { ...TUMBLE, p1Dur: 0.6, p2Dur: 0.58 },
+  float: { y: 10, duration: 3.5, rotateZ: 2 },
+  tumble: { p1Dur: 0.55, p1Ease: "power2.in", rotateZ: 30, scale: 0.8, p2Dur: 0.65, p2Ease: "back.out(2.5)" },
   glowOpacity: 0.9,
+  glowScale: 1.5,
   celebrate: [
-    { to: { scale: 1.2 }, duration: 0.2, ease: "power2.out" },
+    { to: { scale: 1.15 }, duration: 0.2, ease: "power2.out" },
     { to: { scale: 1 }, duration: 0.5, delay: 0.2, ease: "back.out(2)" },
   ],
-  fail: [],
-  // Wants attention: a big scale and a doubled glow.
+  fail: [
+    { hold: 0.6 },
+    { to: { y: 5 }, duration: 0.8, ease: "power2.out" },
+  ],
   hover: { scale: 1.08, ms: 300, ease: "ease-out", glowAlpha: "66" },
 };
 
+// d20 — THE benchmark (the rerollgaming.com feel). A balanced float: rotateX with
+// an off-phase rotateZ jitter. A smooth, weighted, satisfying tumble. A confident
+// scale overshoot + radial glow on a 20; the classic number shake on a 1.
+const D20_ANIM: AnimConfig = {
+  color: "#c0392b",
+  float: { y: 8, duration: 3.5, rotateX: 2, jitter: { prop: "rotateZ", amount: 1, duration: 3.5, delay: 1.75 } },
+  tumble: { p1Dur: 0.5, p1Ease: "power2.in", rotateZ: 20, scale: 0.85, p2Dur: 0.55, p2Ease: "back.out(2)" },
+  glowOpacity: 0.5,
+  glowScale: 1.4,
+  celebrate: [
+    { keyframes: { scale: [1, 1.08, 1] }, duration: 0.5, ease: "power2.inOut" },
+  ],
+  fail: [],
+  hover: { scale: 1.03, ms: 400, ease: "ease-out", glowAlpha: "40", shadowColor: "#e74c3c" },
+};
+
+// d30 — slow and regal. Everything unhurried: a slow float with a gentle rotateY;
+// a grand, slow tumble; a slow held pulse on a 30; a stunned, motionless freeze on
+// a 1 (the idle simply pauses, then resumes).
 const D30_ANIM: AnimConfig = {
   color: "#8e44ad",
-  float: { y: 10, rotateX: 3, rotateZ: 1.5, rotateY: 2, duration: 4.2 },
-  tumble: { ...TUMBLE, p1Dur: 0.6, p2Dur: 0.6 },
-  glowOpacity: 0.7,
+  float: { y: 6, duration: 4.5, rotateY: 1.5 },
+  tumble: { p1Dur: 0.6, p1Ease: "power2.in", rotateZ: 15, scale: 0.85, p2Dur: 0.7, p2Ease: "back.out(1.8)" },
+  glowOpacity: 0,
+  glowScale: 1.3,
   celebrate: [
-    { to: { scale: 1.15 }, duration: 0.4, ease: "power2.inOut" },
-    { to: { scale: 1 }, duration: 0.6, delay: 0.4, ease: "power2.inOut" },
+    { to: { scale: 1.1 }, duration: 0.4, ease: "power2.inOut" },
+    { to: { scale: 1 }, duration: 0.5, delay: 0.3, ease: "power2.inOut" },
   ],
-  fail: [{ hold: 0.5 }],
-  // Regal: a slow, unhurried scale.
+  fail: [{ hold: 1.5 }],
   hover: { scale: 1.04, ms: 500, ease: "ease-out", glowAlpha: "33" },
 };
 
 // The celestial d∞. Its roll, celebration, and failure are special-cased in
 // Dice.tsx (a slow majestic spin; stars flash / dim), so the tumble and
-// celebrate/fail steps here are unused placeholders.
+// celebrate/fail steps here are unused placeholders. Its float is ethereal and
+// very slow; the stars twinkle on their own clocks.
 const DINF_ANIM: AnimConfig = {
   color: "#94b8ff",
-  float: { y: 8, rotateX: 2, rotateZ: 0, rotateY: 4, duration: 5 },
-  tumble: { ...TUMBLE },
-  glowOpacity: 0.6,
+  float: { y: 12, duration: 5.0, rotateY: 1 },
+  tumble: { p1Dur: 0.5, p1Ease: "power2.in", rotateZ: 0, scale: 0.85, p2Dur: 0.55, p2Ease: "back.out(2)" },
+  glowOpacity: 0,
+  glowScale: 1.3,
   celebrate: [],
   fail: [],
   hover: { scale: 1.03, ms: 400, ease: "ease-out", glowAlpha: "40" },
 };
+
+// d20 is the benchmark every other die is tuned against.
+export const DEFAULT_ANIM: AnimConfig = D20_ANIM;
 
 export const ANIM: Record<DieType, AnimConfig> = {
   d4: D4_ANIM,
@@ -485,7 +498,7 @@ export const ANIM: Record<DieType, AnimConfig> = {
   d8: D8_ANIM,
   d10: D10_ANIM,
   d12: D12_ANIM,
-  d20: DEFAULT_ANIM, // d20 IS the benchmark
+  d20: D20_ANIM,
   d30: D30_ANIM,
   dinf: DINF_ANIM,
 };

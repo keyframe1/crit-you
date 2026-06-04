@@ -35,8 +35,8 @@ function MiniDie({ type, active }: { type: DieType; active: boolean }) {
           cx="80"
           cy="80"
           r="66"
-          fill="#080818"
-          fillOpacity={0.6}
+          fill="#0a0a14"
+          fillOpacity={0.9}
           stroke={c}
           strokeWidth={3}
           strokeOpacity={0.45}
@@ -79,7 +79,7 @@ function MiniDie({ type, active }: { type: DieType; active: boolean }) {
   );
 }
 
-// Horizontal carousel of all seven dice. Drag to scroll, snap to the nearest
+// Horizontal carousel of all eight dice. Drag to scroll, snap to the nearest
 // chip on release; tap to select. The selected chip is centred and highlighted.
 export default function DiceSelector({ value, onChange }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -147,18 +147,24 @@ export default function DiceSelector({ value, onChange }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compact]);
 
-  const activeSize = compact ? 48 : 64;
-  const inactiveSize = compact ? 40 : 48;
+  // Uniform icon size: 44px desktop / 36px mobile. Selection is conveyed by a
+  // 2px signature border + a 1.1 scale + a signature glow, not a size change.
+  const iconSize = compact ? 36 : 44;
+  const gap = compact ? 8 : 12;
 
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden py-5"
+      className="no-scrollbar relative overflow-hidden py-5"
       style={{ touchAction: "pan-y" }}
     >
+      {/* A draggable row whose selected chip is JS-centred in the viewport (the
+          50vw padding gives the end chips room to reach centre). Dragging /
+          scrolling horizontally reaches the rest — important on narrow screens
+          where all 8 chips can't sit on-screen at once. */}
       <motion.div
-        className="flex items-end gap-4 w-max px-[50vw] cursor-grab active:cursor-grabbing"
-        style={{ x }}
+        className="flex items-end w-max px-[50vw] cursor-grab active:cursor-grabbing"
+        style={{ x, gap }}
         drag="x"
         dragElastic={0.18}
         onDragEnd={handleDragEnd}
@@ -173,27 +179,34 @@ export default function DiceSelector({ value, onChange }: Props) {
                 itemRefs.current[i] = el;
               }}
               onClick={() => (active ? center(i) : onChange(d.type))}
-              className="flex flex-col items-center justify-end shrink-0 transition-all duration-300 outline-none"
-              style={{ opacity: active ? 1 : 0.4 }}
+              className="flex flex-col items-center justify-end shrink-0 outline-none"
+              style={{
+                opacity: active ? 1 : 0.3,
+                transition: "opacity 250ms ease-out",
+              }}
               aria-label={`Select ${labelFor(d.type)}`}
               aria-pressed={active}
             >
               <div
-                className="transition-all duration-300"
+                className="flex items-center justify-center rounded-lg"
                 style={{
-                  width: active ? activeSize : inactiveSize,
-                  height: active ? activeSize : inactiveSize,
-                  transform: active ? "scale(1)" : "scale(0.92)",
-                  filter: active
-                    ? `drop-shadow(0 4px 16px ${sig}59)`
-                    : "none",
+                  width: iconSize,
+                  height: iconSize,
+                  padding: 3,
+                  border: `2px solid ${active ? sig : "transparent"}`,
+                  transform: active ? "scale(1.1)" : "scale(1)",
+                  filter: active ? `drop-shadow(0 0 10px ${sig}4D)` : "none",
+                  transition: "transform 250ms ease-out, border-color 250ms ease-out, filter 250ms ease-out",
                 }}
               >
                 <MiniDie type={d.type} active={active} />
               </div>
               <span
-                className="font-mono text-[9px] tracking-[0.18em] mt-2"
-                style={{ color: active ? sig : "var(--light)" }}
+                className="font-mono text-[9px] tracking-[0.18em] uppercase mt-2"
+                style={{
+                  color: active ? sig : "var(--light)",
+                  transition: "color 250ms ease-out",
+                }}
               >
                 {labelFor(d.type)}
               </span>
