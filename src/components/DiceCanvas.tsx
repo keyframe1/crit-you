@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import gsap from "gsap";
-import { maxFor, type DieType } from "@/lib/dice";
+import { type DieType } from "@/lib/dice";
+import D4 from "./dice3d/D4";
+import D6 from "./dice3d/D6";
+import D8 from "./dice3d/D8";
+import D10 from "./dice3d/D10";
+import D12 from "./dice3d/D12";
 import D20 from "./dice3d/D20";
+import D30 from "./dice3d/D30";
+import DInf from "./dice3d/DInf";
 
 interface Props {
   dieType: DieType;
@@ -13,10 +19,8 @@ interface Props {
   onRoll: (value: number) => void;
 }
 
-// The shared Three.js stage: lighting, a shadow-catching floor, and whichever
-// die's 3D mesh is currently selected. Only the d20 has a 3D component so far —
-// every other die still renders as flat SVG via the legacy <Dice> (page.tsx
-// routes between them with is3DDie). As each die is ported it slots in here.
+// Pick the 3D component for the selected die. Each die owns its own on-face
+// result number, so there is nothing for the canvas to render over the top.
 function Die3D({
   dieType,
   rollNonce,
@@ -27,54 +31,37 @@ function Die3D({
   onResult: (value: number) => void;
 }) {
   switch (dieType) {
+    case "d4":
+      return <D4 rollNonce={rollNonce} onResult={onResult} />;
+    case "d6":
+      return <D6 rollNonce={rollNonce} onResult={onResult} />;
+    case "d8":
+      return <D8 rollNonce={rollNonce} onResult={onResult} />;
+    case "d10":
+      return <D10 rollNonce={rollNonce} onResult={onResult} />;
+    case "d12":
+      return <D12 rollNonce={rollNonce} onResult={onResult} />;
     case "d20":
       return <D20 rollNonce={rollNonce} onResult={onResult} />;
+    case "d30":
+      return <D30 rollNonce={rollNonce} onResult={onResult} />;
+    case "dinf":
+      return <DInf rollNonce={rollNonce} onResult={onResult} />;
     default:
       return null;
   }
 }
 
+// The shared Three.js stage: one Canvas, lighting, and a shadow-catching floor,
+// hosting whichever die is selected.
 export default function DiceCanvas({ dieType, onRoll }: Props) {
   // Clicking anywhere in the stage bumps this; the die component watches it and
   // rolls (guarding against re-rolls mid-animation itself).
   const [rollNonce, setRollNonce] = useState(0);
-  // The result number lives as an HTML overlay above the canvas, not as 3D text.
-  const numberRef = useRef<HTMLDivElement>(null);
 
   const handleClick = useCallback(() => {
     setRollNonce((n) => n + 1);
   }, []);
-
-  // Reset the number when the die changes so a stale result never lingers over a
-  // freshly mounted die.
-  useEffect(() => {
-    const el = numberRef.current;
-    if (el) {
-      gsap.killTweensOf(el);
-      gsap.set(el, { opacity: 0 });
-    }
-  }, [dieType]);
-
-  // The die reports its value partway through the roll; we reveal the number
-  // (fade in, hold, fade out) and hand the value up for the personality line.
-  const handleResult = useCallback(
-    (value: number) => {
-      onRoll(value);
-      const el = numberRef.current;
-      if (!el) return;
-      const max = maxFor(dieType);
-      const isMax = value >= max;
-      const isMin = value <= 1;
-      el.textContent = String(value);
-      el.style.color = isMax ? "#c0392b" : isMin ? "#aaa8a0" : "#1a1a18";
-      gsap.killTweensOf(el);
-      const tl = gsap.timeline();
-      tl.set(el, { opacity: 0 });
-      tl.to(el, { opacity: 1, duration: 0.4, ease: "power2.out" });
-      tl.to(el, { opacity: 0, duration: 0.5, ease: "power2.in" }, "+=1.5");
-    },
-    [dieType, onRoll]
-  );
 
   return (
     <div
@@ -91,7 +78,7 @@ export default function DiceCanvas({ dieType, onRoll }: Props) {
       <Canvas
         shadows
         dpr={[1, 2]}
-        camera={{ position: [0, 1.5, 4], fov: 45 }}
+        camera={{ position: [0, 1.5, 5], fov: 45 }}
         gl={{ alpha: true }}
       >
         {/* Warm ambient base matched to the cream page. */}
@@ -114,7 +101,7 @@ export default function DiceCanvas({ dieType, onRoll }: Props) {
         <directionalLight position={[2, -1, 3]} intensity={0.3} color="#ffe8d6" />
 
         {/* Invisible floor that only catches the die's shadow — sits well below
-            the larger die so the shadow reads as a soft floating contact. */}
+            the die so the shadow reads as a soft floating contact. */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.4, 0]} receiveShadow>
           <planeGeometry args={[40, 40]} />
           <shadowMaterial transparent opacity={0.12} />
@@ -125,17 +112,9 @@ export default function DiceCanvas({ dieType, onRoll }: Props) {
           key={dieType}
           dieType={dieType}
           rollNonce={rollNonce}
-          onResult={handleResult}
+          onResult={onRoll}
         />
       </Canvas>
-
-      {/* Result number, centred over the canvas (HTML, not 3D text). */}
-      <div
-        ref={numberRef}
-        aria-hidden
-        className="absolute inset-0 flex items-center justify-center pointer-events-none font-sans font-black tabular-nums text-[32px] sm:text-[40px]"
-        style={{ opacity: 0, zIndex: 20 }}
-      />
     </div>
   );
 }

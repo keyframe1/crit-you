@@ -23,14 +23,9 @@ export const DICE: DieDef[] = [
 
 export const DEFAULT_DIE: DieType = "d20";
 
-// Which dice have a real Three.js 3D mesh yet. Everything else still renders as
-// the legacy flat SVG die. This grows by one entry each time a die is ported to
-// 3D; page.tsx uses it to route between <DiceCanvas> (3D) and <Dice> (SVG).
-export const DICE_3D: ReadonlySet<DieType> = new Set<DieType>(["d20"]);
-
-export function is3DDie(type: DieType): boolean {
-  return DICE_3D.has(type);
-}
+// Every die now renders as a real Three.js 3D object (see components/dice3d/*).
+// The legacy flat-SVG <Dice> component is retired from the main view; only the
+// selector still uses the SVG mini thumbnails (SHAPES, below).
 
 // Display label (the celestial die shows the infinity glyph, not "DINF").
 export function labelFor(type: DieType): string {
