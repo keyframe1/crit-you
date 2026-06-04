@@ -2,46 +2,51 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-import { DICE, SHAPES, DIE_STROKE, animFor, type DieType } from "@/lib/dice";
+import {
+  DICE,
+  SHAPES,
+  DIE_STROKE,
+  animFor,
+  faceColor,
+  type DieType,
+} from "@/lib/dice";
 
 interface Props {
   value: DieType;
   onChange: (type: DieType) => void;
 }
 
-// Miniature of the exact same wireframe used full-size — same warm off-white
-// (the die's signature colour when selected) and the same 2.2 : 1.0 weight
-// ratio, scaled up so the strokes stay visible at chip size.
-const MINI_OUTER = 5.5;
-const MINI_INNER = 2.5;
+// Miniature of the exact same solid die used full-size — the same shaded
+// signature-colour facets, scaled down. The selected chip's facets brighten a
+// touch; unselected chips are dimmed by the button's opacity.
+const MINI_SILHOUETTE = 3;
 
 function MiniDie({ type, active }: { type: DieType; active: boolean }) {
-  const color = active ? animFor(type).color : DIE_STROKE;
   const shape = SHAPES[type];
+  const color = animFor(type).color;
   return (
-    <svg
-      viewBox="0 0 160 160"
-      className="w-full h-full transition-colors duration-200"
-      style={{ overflow: "visible" }}
-    >
-      {shape.lines.map(([x1, y1, x2, y2], i) => (
-        <line
-          key={i}
-          x1={x1}
-          y1={y1}
-          x2={x2}
-          y2={y2}
-          stroke={color}
-          strokeWidth={MINI_INNER}
-        />
-      ))}
+    <svg viewBox="0 0 160 160" className="w-full h-full" style={{ overflow: "visible" }}>
+      {shape.faces.map((f, i) => {
+        const fc = faceColor(color, f.depth, active);
+        return (
+          <polygon
+            key={i}
+            points={f.points}
+            fill={fc}
+            stroke={fc}
+            strokeWidth={0.75}
+            strokeLinejoin="round"
+          />
+        );
+      })}
       {shape.polygons.map((points, i) => (
         <polygon
-          key={i}
+          key={`o${i}`}
           points={points}
           fill="none"
-          stroke={color}
-          strokeWidth={MINI_OUTER}
+          stroke={DIE_STROKE}
+          strokeWidth={MINI_SILHOUETTE}
+          strokeOpacity={0.35}
           strokeLinejoin="round"
         />
       ))}

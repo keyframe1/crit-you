@@ -6,10 +6,10 @@ import {
   SHAPES,
   maxFor,
   animFor,
-  faceOpacity,
+  faceColor,
   DIE_STROKE,
-  OUTER_WEIGHT,
-  INNER_WEIGHT,
+  SILHOUETTE_WEIGHT,
+  SILHOUETTE_OPACITY,
   type DieType,
   type TweenStep,
 } from "@/lib/dice";
@@ -17,26 +17,21 @@ import {
 interface Props {
   dieType: DieType;
   // Fired once the result is revealed, with the rolled value. The parent owns
-  // the personality line and share state; the result number lives in here now.
+  // the personality line and share state; the result number lives in here.
   onRoll: (value: number) => void;
 }
 
-// The shared intro for an ordinary (non nat-1, non nat-max) result number:
-// spring down from a large scale with a back.out overshoot.
+// The shared intro for an ordinary (non nat-1, non nat-max) result number.
 const NUMBER_NORMAL: TweenStep[] = [
   { set: { opacity: 0, scale: 2.8, x: 0, y: 0, rotation: 0 } },
   { to: { opacity: 1, scale: 1 }, duration: 0.4, ease: "back.out(3)" },
 ];
 
 // Build and play a GSAP timeline from a list of TweenSteps on `el`, calling
-// `onDone` when the whole sequence finishes. The generic engine behind every
-// die's body flourishes (celebration / failure) and its result-number intro —
-// the steps themselves live as data in lib/dice, never as conditionals here.
-function playSequence(
-  el: Element,
-  steps: TweenStep[],
-  onDone?: () => void
-) {
+// `onDone` when finished. The generic engine behind every die's body flourish
+// (celebration / failure) and its result-number intro — the steps themselves
+// live as data in lib/dice, never as conditionals here.
+function playSequence(el: Element, steps: TweenStep[], onDone?: () => void) {
   const tl = gsap.timeline({ onComplete: onDone });
   for (const s of steps) {
     if (s.set) {
@@ -65,6 +60,7 @@ function playSequence(
 export default function Dice({ dieType, onRoll }: Props) {
   const bodyRef = useRef<SVGSVGElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const shadowRef = useRef<HTMLDivElement>(null);
   const numberRef = useRef<SVGTextElement>(null);
   // The shape currently drawn. Lags `dieType` so we can fade the old die out
   // before swapping the SVG and fading the new one in.
@@ -85,27 +81,45 @@ export default function Dice({ dieType, onRoll }: Props) {
     dieRef.current = dieType;
   }, [dieType]);
 
-  // The shared idle float, tuned per die: sinusoidal Y + slight rotateX, forever.
+  // The shared idle float, tuned per die: a slow Y bob + slight rotateX/rotateZ
+  // sway. The contact shadow runs on the same clock, inverted — when the die
+  // floats up the shadow widens and fades, when it sinks the shadow tightens
+  // and darkens. That inverse motion is what sells "floating".
   const startIdle = useCallback(() => {
     const body = bodyRef.current;
     if (!body) return;
-    const { y, rotateX, duration } = animFor(dieRef.current).float;
+    const { y, rotateX, rotateZ, duration } = animFor(dieRef.current).float;
     gsap.to(body, {
       y,
       rotateX,
+      rotateZ,
       duration,
       ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
     });
+    const shadow = shadowRef.current;
+    if (shadow) {
+      gsap.set(shadow, { scaleX: 1.15, opacity: 0.12 });
+      gsap.to(shadow, {
+        scaleX: 0.85,
+        opacity: 0.25,
+        duration,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
+      });
+    }
   }, []);
 
   // Kick off the idle float on mount.
   useEffect(() => {
     startIdle();
     const body = bodyRef.current;
+    const shadow = shadowRef.current;
     return () => {
       if (body) gsap.killTweensOf(body);
+      if (shadow) gsap.killTweensOf(shadow);
     };
   }, [startIdle]);
 
@@ -132,11 +146,11 @@ export default function Dice({ dieType, onRoll }: Props) {
 
       gsap.killTweensOf(el);
       playSequence(el, steps, () => {
-        // Hold, then fade out, and the die returns to its idle float.
+        // Hold long enough to read, then fade out; the die returns to idle.
         gsap.to(el, {
           opacity: 0,
           duration: 0.35,
-          delay: 0.85,
+          delay: 1.5,
           ease: "power2.in",
         });
       });
@@ -156,27 +170,28 @@ export default function Dice({ dieType, onRoll }: Props) {
     if (!body) return;
 
     gsap.killTweensOf(body);
+    if (shadowRef.current) gsap.killTweensOf(shadowRef.current);
     if (numberRef.current) {
       gsap.killTweensOf(numberRef.current);
       gsap.set(numberRef.current, { opacity: 0 });
     }
     setRolling(false);
-    // Current die: fades + scales out (0.25s).
+    // Current die: fades + scales out (0.35s).
     gsap.to(body, {
       opacity: 0,
       scale: 0.9,
-      duration: 0.25,
+      duration: 0.35,
       ease: "power2.in",
       onComplete: () => {
         setShapeType(dieType);
-        // 100ms gap, then the new die springs in (0.35s).
+        // ~100ms gap, then the new die springs in (0.45s).
         gsap.fromTo(
           body,
           { opacity: 0, scale: 0.9 },
           {
             opacity: 1,
             scale: 1,
-            duration: 0.35,
+            duration: 0.45,
             delay: 0.1,
             ease: "back.out(1.5)",
             onComplete: startIdle,
@@ -197,14 +212,15 @@ export default function Dice({ dieType, onRoll }: Props) {
     const cfg = animFor(dieType);
     const { tumble } = cfg;
 
-    // Kill the idle float and hide any lingering number for the roll.
+    // Kill the idle float (body + shadow) and hide any lingering number.
     gsap.killTweensOf(body);
+    if (shadowRef.current) gsap.killTweensOf(shadowRef.current);
     if (numberRef.current) {
       gsap.killTweensOf(numberRef.current);
       gsap.set(numberRef.current, { opacity: 0 });
     }
 
-    // Phase 1 — 3D tumble in, with this die's snap, spread, and squash.
+    // Phase 1 — a heavy 3D tumble in.
     gsap.to(body, {
       rotateX: 360,
       rotateY: 360,
@@ -213,7 +229,7 @@ export default function Dice({ dieType, onRoll }: Props) {
       duration: tumble.p1Dur,
       ease: tumble.p1Ease,
       onComplete: () => {
-        // Phase 2 — settle with this die's overshoot.
+        // Phase 2 — let the settle breathe, with this die's overshoot.
         gsap.to(body, {
           rotateX: 0,
           rotateY: 0,
@@ -257,8 +273,6 @@ export default function Dice({ dieType, onRoll }: Props) {
 
   const shape = SHAPES[shapeType];
   const color = animFor(shapeType).color;
-  // Hover brightens the fills and is faster to engage (300ms) than to release.
-  const hoverBoost = hovered ? 0.05 : 0;
   const hoverMs = hovered ? 300 : 400;
 
   return (
@@ -275,7 +289,34 @@ export default function Dice({ dieType, onRoll }: Props) {
         perspective: "600px",
       }}
     >
-      {/* Signature-coloured glow behind the die (tints on a nat max and on swap). */}
+      {/* Floating contact shadow. The wrapper centres it and carries the hover
+          response; the inner element is what GSAP pulses with the float. */}
+      <div
+        className="absolute left-1/2 bottom-[1%] pointer-events-none"
+        style={{
+          width: "62%",
+          height: "9%",
+          zIndex: 0,
+          transform: hovered
+            ? "translateX(-50%) scaleX(1.12)"
+            : "translateX(-50%) scaleX(1)",
+          opacity: hovered ? 0.7 : 1,
+          transition: `transform ${hoverMs}ms ease-out, opacity ${hoverMs}ms ease-out`,
+        }}
+      >
+        <div
+          ref={shadowRef}
+          className="h-full w-full"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 70%)",
+            opacity: 0.2,
+            transformOrigin: "center",
+          }}
+        />
+      </div>
+
+      {/* Signature-coloured glow behind the die (nat-max pulse + swap tint). */}
       <div
         ref={glowRef}
         className="absolute -inset-8 rounded-full pointer-events-none"
@@ -286,15 +327,15 @@ export default function Dice({ dieType, onRoll }: Props) {
         }}
       />
 
-      {/* Hover scaler: scale + signature drop-shadow live here, separate from the
+      {/* Hover lift + signature drop-shadow live here, separate from the
           GSAP-driven float/tumble on the SVG inside. */}
       <div
         className="relative h-full w-full"
         style={{
           zIndex: 10,
-          transform: hovered ? "scale(1.03)" : "scale(1)",
+          transform: hovered ? "translateY(-8px)" : "translateY(0px)",
           filter: hovered
-            ? `drop-shadow(0 0 24px ${color}40)`
+            ? `drop-shadow(0 0 20px ${color}33)`
             : `drop-shadow(0 0 0px ${color}00)`,
           transition: `transform ${hoverMs}ms ease-out, filter ${hoverMs}ms ease-out`,
         }}
@@ -305,39 +346,34 @@ export default function Dice({ dieType, onRoll }: Props) {
           viewBox="0 0 160 160"
           style={{ transformStyle: "preserve-3d" }}
         >
-          {/* Translucent facet fills (bottom — gives the die solidity & depth). */}
-          {shape.faces.map((f, i) => (
-            <polygon
-              key={i}
-              points={f.points}
-              fill={color}
-              stroke="none"
-              style={{
-                fillOpacity: faceOpacity(f.depth) + hoverBoost,
-                transition: `fill-opacity ${hoverMs}ms ease-out`,
-              }}
-            />
-          ))}
-          {/* Interior facet edges (thin — structure). */}
-          {shape.lines.map(([x1, y1, x2, y2], i) => (
-            <line
-              key={i}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={DIE_STROKE}
-              strokeWidth={INNER_WEIGHT}
-            />
-          ))}
-          {/* Silhouette outlines (heavy — solid). Drawn last, on top. */}
+          {/* Solid, shaded facets — back-to-front. No internal wireframe; the
+              shade difference between faces is what defines the edges. A
+              same-colour hairline stroke just covers anti-alias seams. */}
+          {shape.faces.map((f, i) => {
+            const fc = faceColor(color, f.depth, hovered);
+            return (
+              <polygon
+                key={i}
+                points={f.points}
+                fill={fc}
+                stroke={fc}
+                strokeWidth={0.75}
+                strokeLinejoin="round"
+                style={{
+                  transition: `fill ${hoverMs}ms ease-out, stroke ${hoverMs}ms ease-out`,
+                }}
+              />
+            );
+          })}
+          {/* Outer silhouette — a faint edge against the dark background. */}
           {shape.polygons.map((points, i) => (
             <polygon
-              key={i}
+              key={`o${i}`}
               points={points}
               fill="none"
               stroke={DIE_STROKE}
-              strokeWidth={OUTER_WEIGHT}
+              strokeWidth={SILHOUETTE_WEIGHT}
+              strokeOpacity={SILHOUETTE_OPACITY}
               strokeLinejoin="round"
             />
           ))}
