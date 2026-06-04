@@ -115,6 +115,62 @@ const FALLBACK_LINES: Pool = {
 // Keyed by die type, then category. A die present here overrides the house
 // voice; a die absent here borrows it until its own personality lands.
 export const DIE_LINES: Partial<Record<DieType, Pool>> = {
+  // ═══ D4 — "The Caltrop" ═══
+  // Angry little triangle. Smallest die, biggest attitude — defensive about its
+  // 1-to-4 range, passive-aggressive about it, and aware that it hurts to step on.
+  d4: {
+    nat_min: [
+      "One. Out of FOUR. You had a 25% chance and still failed.",
+      "I may be small but that roll was smaller.",
+      "A one. On a die with FOUR sides. Read that back to yourself.",
+      "You stepped on me for THIS? Step on me again, see what happens.",
+      "One. I have a quarter of the range and you found the very bottom of it.",
+      "I am a weapon, you know. A caltrop. And you just bent my point.",
+      "Even I'm offended, and I'm the one with the anger issues.",
+      "The smallest number on the smallest die. A masterpiece of failure.",
+      "Congratulations. You've achieved the minimum of the minimum.",
+    ],
+    low: [
+      "Two. Mediocre, even by my standards.",
+      "I only go to four and you still found a way to disappoint me.",
+      "Two. Half of everything I am. Halfway to nothing.",
+      "A two. You're rationing your luck on a FOUR-sided die. Bold.",
+      "Two. I've seen better, and I've only ever rolled four numbers.",
+      "That's a two. I'd be angrier, but I'm saving my energy for stepping duty.",
+      "Two out of four. The participation award of a caltrop.",
+      "A two. On me — the pointiest die in the bag. Embarrassing for us both.",
+    ],
+    mid: [
+      "There is no middle with me. You get small, or you get smaller.",
+      "I don't do 'average.' I do 'sharp' and I do 'disappointing.'",
+      "A d4 has no comfortable middle. Neither do I.",
+      "Middling? On four sides? You're inventing problems.",
+      "I round numbers down out of spite. Keep that in mind.",
+      "Caught between my two and my three. Just like your potential.",
+      "I contain multitudes. Four of them. This is one of the boring ones.",
+      "Somewhere in the middle. For a die my size, that's a rounding error.",
+    ],
+    high: [
+      "Three out of four. I'll allow it.",
+      "Not bad. For someone rolling me instead of a real die.",
+      "Three. That's basically a crit for a die my size. Don't get used to it.",
+      "A three. You're three-quarters of the way to impressing me. Almost.",
+      "Three. I'd celebrate, but I have a reputation for menace to maintain.",
+      "Look at you, rolling a three. The caltrop is mildly less furious.",
+      "Three out of four. The most a disappointment like you deserves.",
+      "A solid three. We don't talk about how close that was to a two.",
+    ],
+    nat_max: [
+      "FOUR. That's literally everything I have and you got it.",
+      "Maximum damage. You're welcome. Don't forget who did that.",
+      "FOUR! The ceiling! MY ceiling! Cherish it — it's all I've got.",
+      "A natural four. I gave you one hundred percent and it cost me everything.",
+      "Four. Perfect. Now step on me out of respect, not by accident.",
+      "MAXIMUM. On four sides that's a 25% miracle, and YOU pulled it off.",
+      "Four out of four. The little triangle that could. That's me. Say it.",
+      "Critical caltrop. Somewhere a barefoot adventurer just felt a chill.",
+    ],
+  },
   // ═══ D20 — "The Main Character" ═══
   // The star, and it knows it. Confident, dry, faintly bored by its own
   // importance. The benchmark personality everything else is measured against.

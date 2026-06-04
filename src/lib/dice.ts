@@ -231,9 +231,40 @@ export const DEFAULT_ANIM: AnimConfig = {
   numberFail: "shake",
 };
 
+// ═══ D4 — "The Caltrop" ═══
+// Angry little triangle. Smallest die, biggest attitude. Its tumble is sharper
+// and twitchier than the benchmark; it celebrates by vibrating with rage-joy
+// and sulks by tilting over and refusing to get up for a second.
+const D4_ANIM: AnimConfig = {
+  float: { y: 4, rotateX: 2, duration: 2.5 },
+  tumble: {
+    p1Dur: 0.25, // snappier than the 0.35 standard — twitchy and fast
+    p1Ease: "power2.in",
+    rotateZ: 60, // wider, more aggressive spin
+    scale: 0.82,
+    p2Dur: 0.4,
+    p2Ease: "back.out(2.5)",
+  },
+  glowOpacity: 0.7,
+  // Rapid triple-pulse — vibrating with rage-joy.
+  celebrate: [
+    {
+      keyframes: { scale: [1, 1.15, 1, 1.1, 1] },
+      duration: 0.6,
+      ease: "power1.inOut",
+    },
+  ],
+  // Tilts to one side and stays tilted for a full second, sulking.
+  fail: [
+    { to: { rotateZ: 15 }, duration: 0.6, ease: "elastic.out(1, 0.4)" },
+    { to: { rotateZ: 0 }, duration: 0.4, delay: 1, ease: "power2.inOut" },
+  ],
+  numberFail: "spring", // the body does the sulking; the number stays clean
+};
+
 // Each die starts as the benchmark; its own commit dials in its character.
 export const ANIM: Record<DieType, AnimConfig> = {
-  d4: DEFAULT_ANIM,
+  d4: D4_ANIM,
   d6: DEFAULT_ANIM,
   d8: DEFAULT_ANIM,
   d10: DEFAULT_ANIM,
