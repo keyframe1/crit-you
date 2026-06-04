@@ -6,6 +6,7 @@ import {
   SHAPES,
   maxFor,
   animFor,
+  faceOpacity,
   DIE_STROKE,
   OUTER_WEIGHT,
   INNER_WEIGHT,
@@ -16,18 +17,25 @@ import {
 interface Props {
   dieType: DieType;
   // Fired once the result is revealed, with the rolled value. The parent owns
-  // the result number, personality line, and share state.
+  // the personality line and share state; the result number lives in here now.
   onRoll: (value: number) => void;
 }
 
+// The shared intro for an ordinary (non nat-1, non nat-max) result number:
+// spring down from a large scale with a back.out overshoot.
+const NUMBER_NORMAL: TweenStep[] = [
+  { set: { opacity: 0, scale: 2.8, x: 0, y: 0, rotation: 0 } },
+  { to: { opacity: 1, scale: 1 }, duration: 0.4, ease: "back.out(3)" },
+];
+
 // Build and play a GSAP timeline from a list of TweenSteps on `el`, calling
-// `onDone` when the whole sequence finishes. This is the generic engine behind
-// every die's celebration (nat max) and failure (nat 1) flourish — the steps
-// themselves live as data in lib/dice's AnimConfig, never as conditionals here.
+// `onDone` when the whole sequence finishes. The generic engine behind every
+// die's body flourishes (celebration / failure) and its result-number intro —
+// the steps themselves live as data in lib/dice, never as conditionals here.
 function playSequence(
-  el: SVGSVGElement,
+  el: Element,
   steps: TweenStep[],
-  onDone: () => void
+  onDone?: () => void
 ) {
   const tl = gsap.timeline({ onComplete: onDone });
   for (const s of steps) {
@@ -57,11 +65,12 @@ function playSequence(
 export default function Dice({ dieType, onRoll }: Props) {
   const bodyRef = useRef<SVGSVGElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const numberRef = useRef<SVGTextElement>(null);
   // The shape currently drawn. Lags `dieType` so we can fade the old die out
   // before swapping the SVG and fading the new one in.
   const [shapeType, setShapeType] = useState<DieType>(dieType);
   const [rolling, setRolling] = useState(false);
-  const [hinted, setHinted] = useState(true);
+  const [hovered, setHovered] = useState(false);
 
   // Keep the latest onRoll without resubscribing the roll handler.
   const onRollRef = useRef(onRoll);
@@ -100,6 +109,41 @@ export default function Dice({ dieType, onRoll }: Props) {
     };
   }, [startIdle]);
 
+  // Reveal the result number inside the die, with this die's intimate intro.
+  const revealNumber = useCallback(
+    (value: number, isMax: boolean, isMin: boolean) => {
+      const el = numberRef.current;
+      if (!el) return;
+      const cfg = animFor(dieType);
+      el.textContent = String(value);
+      const color = isMax
+        ? cfg.numberMaxColor ?? "#c0392b"
+        : isMin
+        ? "#555555"
+        : "#e8e4dc";
+      el.style.fill = color;
+      el.style.filter = isMax ? `drop-shadow(0 0 10px ${color}99)` : "none";
+
+      const steps = isMax
+        ? cfg.numberMax
+        : isMin
+        ? cfg.numberMin
+        : NUMBER_NORMAL;
+
+      gsap.killTweensOf(el);
+      playSequence(el, steps, () => {
+        // Hold, then fade out, and the die returns to its idle float.
+        gsap.to(el, {
+          opacity: 0,
+          duration: 0.35,
+          delay: 0.85,
+          ease: "power2.in",
+        });
+      });
+    },
+    [dieType]
+  );
+
   // Cross-fade when the selected die changes: fade/scale out, swap the SVG,
   // then spring back in and restart the (now per-die) idle float.
   const isFirst = useRef(true);
@@ -112,21 +156,28 @@ export default function Dice({ dieType, onRoll }: Props) {
     if (!body) return;
 
     gsap.killTweensOf(body);
+    if (numberRef.current) {
+      gsap.killTweensOf(numberRef.current);
+      gsap.set(numberRef.current, { opacity: 0 });
+    }
     setRolling(false);
+    // Current die: fades + scales out (0.25s).
     gsap.to(body, {
       opacity: 0,
       scale: 0.9,
-      duration: 0.2,
+      duration: 0.25,
       ease: "power2.in",
       onComplete: () => {
         setShapeType(dieType);
+        // 100ms gap, then the new die springs in (0.35s).
         gsap.fromTo(
           body,
           { opacity: 0, scale: 0.9 },
           {
             opacity: 1,
             scale: 1,
-            duration: 0.3,
+            duration: 0.35,
+            delay: 0.1,
             ease: "back.out(1.5)",
             onComplete: startIdle,
           }
@@ -138,7 +189,6 @@ export default function Dice({ dieType, onRoll }: Props) {
   const roll = useCallback(() => {
     if (rolling || !bodyRef.current) return;
     setRolling(true);
-    setHinted(false);
 
     const body = bodyRef.current;
     const glow = glowRef.current;
@@ -147,8 +197,12 @@ export default function Dice({ dieType, onRoll }: Props) {
     const cfg = animFor(dieType);
     const { tumble } = cfg;
 
-    // Kill the idle float for the duration of the roll.
+    // Kill the idle float and hide any lingering number for the roll.
     gsap.killTweensOf(body);
+    if (numberRef.current) {
+      gsap.killTweensOf(numberRef.current);
+      gsap.set(numberRef.current, { opacity: 0 });
+    }
 
     // Phase 1 — 3D tumble in, with this die's snap, spread, and squash.
     gsap.to(body, {
@@ -185,8 +239,11 @@ export default function Dice({ dieType, onRoll }: Props) {
       },
     });
 
-    // Reveal the result mid-tumble (the parent renders the number).
-    gsap.delayedCall(0.4, () => onRollRef.current(num));
+    // Reveal the result mid-tumble — line to the parent, number inside the die.
+    gsap.delayedCall(0.4, () => {
+      onRollRef.current(num);
+      revealNumber(num, num >= max, num <= 1);
+    });
 
     // Radial glow pulse behind the die on a natural max, intensity per die.
     if (num === max && glow) {
@@ -196,27 +253,71 @@ export default function Dice({ dieType, onRoll }: Props) {
         { opacity: 0, scale: 1.3, duration: 0.8, ease: "power2.out" }
       );
     }
-  }, [rolling, dieType, startIdle]);
+  }, [rolling, dieType, startIdle, revealNumber]);
 
   const shape = SHAPES[shapeType];
+  const color = animFor(shapeType).color;
+  // Hover brightens the fills and is faster to engage (300ms) than to release.
+  const hoverBoost = hovered ? 0.05 : 0;
+  const hoverMs = hovered ? 300 : 400;
 
   return (
-    <div className="flex flex-col items-center">
+    <div
+      onClick={roll}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onPointerDown={() => setHovered(true)}
+      onPointerCancel={() => setHovered(false)}
+      className="relative cursor-pointer select-none"
+      style={{
+        width: "clamp(200px, 55vmin, 320px)",
+        height: "clamp(200px, 55vmin, 320px)",
+        perspective: "600px",
+      }}
+    >
+      {/* Signature-coloured glow behind the die (tints on a nat max and on swap). */}
       <div
-        onClick={roll}
-        className="relative cursor-pointer select-none group"
+        ref={glowRef}
+        className="absolute -inset-8 rounded-full pointer-events-none"
         style={{
-          width: "clamp(220px, 56vmin, 440px)",
-          height: "clamp(220px, 56vmin, 440px)",
-          perspective: "600px",
+          background: `radial-gradient(circle, ${color}66, transparent 70%)`,
+          opacity: 0,
+          zIndex: 0,
+        }}
+      />
+
+      {/* Hover scaler: scale + signature drop-shadow live here, separate from the
+          GSAP-driven float/tumble on the SVG inside. */}
+      <div
+        className="relative h-full w-full"
+        style={{
+          zIndex: 10,
+          transform: hovered ? "scale(1.03)" : "scale(1)",
+          filter: hovered
+            ? `drop-shadow(0 0 24px ${color}40)`
+            : `drop-shadow(0 0 0px ${color}00)`,
+          transition: `transform ${hoverMs}ms ease-out, filter ${hoverMs}ms ease-out`,
         }}
       >
         <svg
           ref={bodyRef}
-          className="w-full h-full transition-[filter] duration-[400ms] group-hover:drop-shadow-[0_4px_24px_rgba(192,57,43,0.15)]"
+          className="w-full h-full"
           viewBox="0 0 160 160"
           style={{ transformStyle: "preserve-3d" }}
         >
+          {/* Translucent facet fills (bottom — gives the die solidity & depth). */}
+          {shape.faces.map((f, i) => (
+            <polygon
+              key={i}
+              points={f.points}
+              fill={color}
+              stroke="none"
+              style={{
+                fillOpacity: faceOpacity(f.depth) + hoverBoost,
+                transition: `fill-opacity ${hoverMs}ms ease-out`,
+              }}
+            />
+          ))}
           {/* Interior facet edges (thin — structure). */}
           {shape.lines.map(([x1, y1, x2, y2], i) => (
             <line
@@ -241,23 +342,33 @@ export default function Dice({ dieType, onRoll }: Props) {
             />
           ))}
         </svg>
-        <div
-          ref={glowRef}
-          className="absolute -inset-8 rounded-full pointer-events-none"
+      </div>
+
+      {/* Result number, centred over the die in the same 160×160 user space so
+          it scales with the die. GSAP animates it from its own centre. */}
+      <svg
+        className="absolute inset-0 h-full w-full pointer-events-none"
+        viewBox="0 0 160 160"
+        aria-hidden
+        style={{ overflow: "visible", zIndex: 20 }}
+      >
+        <text
+          ref={numberRef}
+          x="80"
+          y="80"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="52"
+          fontWeight="900"
+          className="tabular-nums"
           style={{
-            background:
-              "radial-gradient(circle, rgba(192,57,43,.4), transparent 70%)",
+            fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             opacity: 0,
+            transformBox: "fill-box",
+            transformOrigin: "center",
           }}
         />
-      </div>
-      <p
-        className={`font-mono text-[11px] tracking-[.12em] text-[var(--mid)] mt-3 transition-all duration-500 ${
-          hinted ? "opacity-100" : "opacity-0 -translate-y-2"
-        }`}
-      >
-        Tap the die
-      </p>
+      </svg>
     </div>
   );
 }

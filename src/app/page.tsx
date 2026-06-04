@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState } from "react";
 import Dice from "@/components/Dice";
-import RollResult from "@/components/RollResult";
 import Personality from "@/components/Personality";
 import DiceSelector from "@/components/DiceSelector";
 import ShareCard from "@/components/ShareCard";
@@ -15,7 +14,8 @@ export default function Home() {
   const rollId = useRef(0);
 
   // The die reports its rolled value; we own the line choice so the displayed
-  // personality text and the share card always agree.
+  // personality text and the share card always agree. The result number itself
+  // now renders inside the die.
   const handleRoll = useCallback(
     (value: number) => {
       const max = maxFor(dieType);
@@ -30,8 +30,8 @@ export default function Home() {
     [dieType]
   );
 
-  // Switching dice clears the stale result so the number/line don't outlive
-  // the die they belonged to.
+  // Switching dice clears the stale result so the line doesn't outlive the die
+  // it belonged to.
   const handleSelect = useCallback((type: DieType) => {
     setDieType(type);
     setRoll(null);
@@ -46,10 +46,10 @@ export default function Home() {
         <ShareCard roll={roll} />
       </header>
 
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3">
-        <Dice dieType={dieType} onRoll={handleRoll} />
-        <RollResult roll={roll} />
+      {/* Speech bubble above, die below (with its result number inside). */}
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4">
         <Personality roll={roll} />
+        <Dice dieType={dieType} onRoll={handleRoll} />
       </div>
 
       <div className="shrink-0">

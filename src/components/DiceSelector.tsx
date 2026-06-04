@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-import { DICE, SHAPES, DIE_STROKE, type DieType } from "@/lib/dice";
+import { DICE, SHAPES, DIE_STROKE, animFor, type DieType } from "@/lib/dice";
 
 interface Props {
   value: DieType;
@@ -10,13 +10,13 @@ interface Props {
 }
 
 // Miniature of the exact same wireframe used full-size — same warm off-white
-// (accent when selected) and the same 2.2 : 1.0 weight ratio, scaled up so the
-// strokes stay visible at chip size.
+// (the die's signature colour when selected) and the same 2.2 : 1.0 weight
+// ratio, scaled up so the strokes stay visible at chip size.
 const MINI_OUTER = 5.5;
 const MINI_INNER = 2.5;
 
 function MiniDie({ type, active }: { type: DieType; active: boolean }) {
-  const color = active ? "var(--accent)" : DIE_STROKE;
+  const color = active ? animFor(type).color : DIE_STROKE;
   const shape = SHAPES[type];
   return (
     <svg
@@ -55,6 +55,8 @@ export default function DiceSelector({ value, onChange }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const x = useMotionValue(0);
+  // Tighter chip sizes on small screens so the row stays comfortably in frame.
+  const [compact, setCompact] = useState(false);
 
   // Centre a given chip in the viewport.
   const center = (index: number, withAnim = true) => {
@@ -91,6 +93,15 @@ export default function DiceSelector({ value, onChange }: Props) {
     else center(best);
   };
 
+  // Track the compact breakpoint (< 640px).
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => setCompact(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   // Recenter whenever the selection changes, on mount, and on resize.
   const index = DICE.findIndex((d) => d.type === value);
   useEffect(() => {
@@ -104,7 +115,10 @@ export default function DiceSelector({ value, onChange }: Props) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [compact]);
+
+  const activeSize = compact ? 48 : 64;
+  const inactiveSize = compact ? 40 : 48;
 
   return (
     <div
@@ -121,6 +135,7 @@ export default function DiceSelector({ value, onChange }: Props) {
       >
         {DICE.map((d, i) => {
           const active = d.type === value;
+          const sig = animFor(d.type).color;
           return (
             <button
               key={d.type}
@@ -134,13 +149,13 @@ export default function DiceSelector({ value, onChange }: Props) {
               aria-pressed={active}
             >
               <div
-                className="transition-transform duration-300"
+                className="transition-all duration-300"
                 style={{
-                  width: active ? 64 : 48,
-                  height: active ? 64 : 48,
+                  width: active ? activeSize : inactiveSize,
+                  height: active ? activeSize : inactiveSize,
                   transform: active ? "scale(1)" : "scale(0.92)",
                   filter: active
-                    ? "drop-shadow(0 4px 16px rgba(192,57,43,.35))"
+                    ? `drop-shadow(0 4px 16px ${sig}59)`
                     : "none",
                 }}
               >
@@ -148,7 +163,7 @@ export default function DiceSelector({ value, onChange }: Props) {
               </div>
               <span
                 className="font-mono text-[9px] tracking-[0.18em] mt-2"
-                style={{ color: active ? "var(--accent)" : "var(--light)" }}
+                style={{ color: active ? sig : "var(--light)" }}
               >
                 {d.type.toUpperCase()}
               </span>
