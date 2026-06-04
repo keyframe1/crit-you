@@ -262,10 +262,34 @@ const D4_ANIM: AnimConfig = {
   numberFail: "spring", // the body does the sulking; the number stays clean
 };
 
+// ═══ D6 — "The Basic" ═══
+// The most common die, and it has made peace with that. Dry, understated, the
+// accountant of the dice bag. Its tumble is steady with almost no spin variation
+// — it doesn't show off — its celebration is a single clean pulse, and even its
+// failure is boring: the number just appears, no spring.
+const D6_ANIM: AnimConfig = {
+  float: { y: 4, rotateX: 2, duration: 2.5 },
+  tumble: {
+    p1Dur: 0.35,
+    p1Ease: "power2.in",
+    rotateZ: 15, // minimal variation — no drama, no showing off
+    scale: 0.82,
+    p2Dur: 0.4,
+    p2Ease: "back.out(2.5)",
+  },
+  glowOpacity: 0.7,
+  // A single clean, professional pulse.
+  celebrate: [
+    { keyframes: { scale: [1, 1.08, 1] }, duration: 0.4, ease: "power2.inOut" },
+  ],
+  fail: [], // it barely reacts — the boredom lives in the number
+  numberFail: "flat", // the number just appears: no spring, no fuss
+};
+
 // Each die starts as the benchmark; its own commit dials in its character.
 export const ANIM: Record<DieType, AnimConfig> = {
   d4: D4_ANIM,
-  d6: DEFAULT_ANIM,
+  d6: D6_ANIM,
   d8: DEFAULT_ANIM,
   d10: DEFAULT_ANIM,
   d12: DEFAULT_ANIM,

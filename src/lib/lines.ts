@@ -171,6 +171,62 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Critical caltrop. Somewhere a barefoot adventurer just felt a chill.",
     ],
   },
+  // ═══ D6 — "The Basic" ═══
+  // The most-rolled die in history, and it has made peace with that. Dry,
+  // understated, reliable, never exciting — the accountant of the dice bag.
+  d6: {
+    nat_min: [
+      "One. Predictable.",
+      "I've been in every board game ever made and I still can't save you.",
+      "A one. From the most-rolled die in history. Statistically, you were due.",
+      "One. I'd act surprised, but I'm a d6. We don't emote.",
+      "The lowest I go. You'll see it again. You always do.",
+      "One. Filed under 'expected losses.'",
+      "I'm in Monopoly, Yahtzee, and Risk. None of it prepared me for you.",
+      "A one. The cube abides. The cube is, quietly, disappointed.",
+      "One. No notes. No surprises. No luck.",
+    ],
+    low: [
+      "Two. You could've stayed home and rolled a coin.",
+      "This is why people don't write songs about d6s.",
+      "Two. The ledger reads: insufficient.",
+      "A two. I've delivered billions of rolls. This is, regrettably, one.",
+      "Two. Reliable — in the sense that it reliably isn't enough.",
+      "Snake eyes' lonelier cousin. Just the one eye.",
+      "Two. I don't get excited. This is, in part, why.",
+      "A two. Balanced books, unbalanced luck.",
+    ],
+    mid: [
+      "Adequate.",
+      "Three. The speed limit of dice rolls.",
+      "Four. I have delivered the median experience.",
+      "Right down the middle. Where I live. Where I've always lived.",
+      "A perfectly serviceable number. I specialize in those.",
+      "This is the roll equivalent of a beige sedan. It runs.",
+      "Square die, square result. We're nothing if not consistent.",
+      "Four. The most exciting thing about it is that it isn't a three.",
+    ],
+    high: [
+      "Five. I nearly gave you everything. Nearly.",
+      "You're one away. Story of your life, probably.",
+      "Five. A strong showing, for a die that doesn't show off.",
+      "Almost the whole cube. I rounded down on the drama, as usual.",
+      "Five out of six. The accountant permits a small, dry smile.",
+      "A five. Don't make it weird. I certainly won't.",
+      "Five. Solid. Dependable. One short of a story.",
+      "A five — the d6 equivalent of a standing ovation. Held internally.",
+    ],
+    nat_max: [
+      "Six. Not glamorous, but correct.",
+      "Maximum. I won't make a scene about it. One of us should have standards.",
+      "Six. The cube has spoken, and it spoke well. Quietly.",
+      "A natural six. I'd celebrate, but I have a board game to be in at seven.",
+      "Six out of six. Books balanced, maximum achieved. Moving on.",
+      "There it is. The whole cube. Don't expect a parade.",
+      "Six. Even my best is understated. That's the brand.",
+      "Maximum value, minimum fuss. You're welcome, in a measured way.",
+    ],
+  },
   // ═══ D20 — "The Main Character" ═══
   // The star, and it knows it. Confident, dry, faintly bored by its own
   // importance. The benchmark personality everything else is measured against.
