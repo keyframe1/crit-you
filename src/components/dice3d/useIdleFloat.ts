@@ -21,7 +21,12 @@ export interface IdleOpts {
 export function useIdleFloat(
   groupRef: { current: THREE.Group | null },
   rollingRef: { current: boolean },
-  { spinSpeed, floatY, floatDuration }: IdleOpts
+  { spinSpeed, floatY, floatDuration }: IdleOpts,
+  // Before a die's first roll, its idle float is exaggerated (×1.5) as a silent
+  // "roll me" invitation; the die calms to its normal float once rolled. The die
+  // owns this ref and flips it false on its first roll — read at startIdle time
+  // so the calming happens naturally when the post-roll idle resumes.
+  boostRef?: { current: boolean }
 ) {
   const tweens = useRef<gsap.core.Tween[]>([]);
 
@@ -45,18 +50,21 @@ export function useIdleFloat(
     const g = groupRef.current;
     if (!g) return;
     killIdle();
+    // ×1.5 amplitude (and a touch more tilt) until the die has been rolled once.
+    const boost = boostRef?.current ? 1.5 : 1;
+    const amp = floatY * boost;
     const loop = () => {
       tweens.current.push(
         gsap.to(g.position, {
-          y: floatY,
+          y: amp,
           duration: floatDuration,
           ease: "sine.inOut",
           yoyo: true,
           repeat: -1,
         }),
         gsap.to(g.rotation, {
-          x: 0.08,
-          z: 0.04,
+          x: 0.08 * boost,
+          z: 0.04 * boost,
           duration: floatDuration,
           ease: "sine.inOut",
           yoyo: true,
@@ -68,7 +76,7 @@ export function useIdleFloat(
       gsap.to(g.position, { y: 0, duration: 0.5, ease: "sine.out", onComplete: loop }),
       gsap.to(g.rotation, { x: 0, z: 0, duration: 0.5, ease: "sine.out" })
     );
-  }, [groupRef, killIdle, floatY, floatDuration]);
+  }, [groupRef, killIdle, floatY, floatDuration, boostRef]);
 
   return { startIdle, killIdle };
 }

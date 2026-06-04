@@ -47,9 +47,33 @@ export default function Home() {
   return (
     <main className="flex flex-col h-[100dvh] overflow-hidden select-none">
       <header className="flex items-center justify-between px-5 py-4 shrink-0">
-        <span className="font-sans font-bold text-[14px] tracking-[0.2em] uppercase text-[var(--ink)]">
-          Crit
-        </span>
+        {/* Wordmark doubles as a reset: click returns to the d20 and clears the
+            current roll. The little die spins on hover. */}
+        <button
+          onClick={() => handleSelect(DEFAULT_DIE)}
+          className="group flex items-center gap-2 -m-2 p-2 outline-none"
+          aria-label="Reset to d20"
+        >
+          <svg
+            viewBox="0 0 160 160"
+            width="16"
+            height="16"
+            aria-hidden
+            className="shrink-0 transition-transform duration-[600ms] ease-out group-hover:rotate-[360deg]"
+          >
+            <polygon points="80,8 152,44 152,116 80,152 8,116 8,44" fill="var(--accent)" />
+            <g stroke="#ffffff" strokeOpacity="0.3" strokeWidth="3.5" fill="none" strokeLinejoin="round">
+              <line x1="80" y1="8" x2="80" y2="152" />
+              <line x1="8" y1="44" x2="152" y2="116" />
+              <line x1="152" y1="44" x2="8" y2="116" />
+              <line x1="8" y1="44" x2="152" y2="44" />
+              <line x1="8" y1="116" x2="152" y2="116" />
+            </g>
+          </svg>
+          <span className="font-sans font-bold text-[14px] tracking-[0.2em] uppercase text-[var(--ink)] transition-colors duration-200 group-hover:text-[var(--accent)]">
+            Crit
+          </span>
+        </button>
         <ShareCard roll={roll} />
       </header>
 
@@ -66,8 +90,15 @@ export default function Home() {
         <DiceCanvas dieType={dieType} onRoll={handleRoll} />
       </div>
 
-      <div className="shrink-0">
+      {/* Selector tray — a subtle top border + tint separate it from the die
+          stage. A minimal wordmark footer sits beneath. */}
+      <div className="shrink-0 border-t border-black/[0.06] bg-black/[0.02]">
         <DiceSelector value={dieType} onChange={handleSelect} />
+        <footer className="text-center pb-3 -mt-2">
+          <span className="font-mono text-[10px] tracking-[0.15em] text-[var(--ink)] opacity-30">
+            crit.you
+          </span>
+        </footer>
       </div>
     </main>
   );

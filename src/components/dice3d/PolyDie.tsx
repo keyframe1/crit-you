@@ -83,17 +83,21 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
   // landing, and result display, so a rapid click can't interrupt or restart it.
   const rollingRef = useRef(false);
   const lockRef = useRef(false);
+  // Exaggerated idle float until this die's first roll (the empty-state "roll me"
+  // invitation); flipped false when a roll begins.
+  const boostRef = useRef(true);
 
   const onResultRef = useRef(onResult);
   useEffect(() => {
     onResultRef.current = onResult;
   }, [onResult]);
 
-  const { startIdle, killIdle } = useIdleFloat(groupRef, rollingRef, {
-    spinSpeed,
-    floatY,
-    floatDuration,
-  });
+  const { startIdle, killIdle } = useIdleFloat(
+    groupRef,
+    rollingRef,
+    { spinSpeed, floatY, floatDuration },
+    boostRef
+  );
 
   useEffect(() => {
     startIdle();
@@ -131,6 +135,7 @@ export default function PolyDie({ rollNonce, onResult, dieType, max, config, geo
     if (!g || lockRef.current) return;
     lockRef.current = true;
     rollingRef.current = true;
+    boostRef.current = false; // first roll calms the exaggerated idle float
     killIdle();
     gsap.killTweensOf(g.scale);
     hideNumber(numRef.current);

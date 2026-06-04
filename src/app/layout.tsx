@@ -12,6 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://crit.you"),
   title: "Crit | Your dice have opinions.",
   description:
     "Premium dice roller with personality. Roll, get roasted, share. crit.you",
@@ -22,10 +23,18 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Crit",
   },
+  // og:image / twitter:image come from app/opengraph-image.tsx automatically.
   openGraph: {
     title: "Crit",
     description: "Your dice have opinions.",
     type: "website",
+    siteName: "Crit",
+    url: "https://crit.you",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Crit",
+    description: "Your dice have opinions.",
   },
 };
 

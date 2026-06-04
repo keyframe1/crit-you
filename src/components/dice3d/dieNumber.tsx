@@ -5,9 +5,10 @@ import { Html } from "@react-three/drei";
 import gsap from "gsap";
 import type { NumberStyle } from "@/lib/bubbleStyles";
 
-// Only STATIC styling lives in the JSX `style` (font, padding, shadow). The
-// dynamic bits — text, colour, background, opacity — are set imperatively on the
-// forwarded ref so drei's per-render re-paint of the panel can't clobber them.
+// Only STATIC styling lives in the JSX `style` (font, shadow). The dynamic bits
+// — text, colour, opacity — are set imperatively on the forwarded ref so drei's
+// per-render re-paint can't clobber them. There is NO background box: the number
+// is raw text whose double shadow keeps it readable over any die.
 function staticStyle(s: NumberStyle): CSSProperties {
   return {
     fontFamily: s.fontFamily,
@@ -15,25 +16,21 @@ function staticStyle(s: NumberStyle): CSSProperties {
     fontStyle: s.fontStyle,
     fontSize: s.fontSize,
     lineHeight: 1,
-    padding: "6px 14px",
-    borderRadius: "8px",
     whiteSpace: "nowrap",
+    textAlign: "center",
     textShadow: s.textShadow,
     pointerEvents: "none",
     userSelect: "none",
     WebkitUserSelect: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   };
 }
 
-// The result number: a drei <Html> panel anchored dead-centre on the die group
-// ([0,0,0]). `center` anchors it on the group's geometric centre; `transform`
-// is off and `sprite` set so it billboards toward the camera and is NEVER
-// rotated by the die — it sits flat and readable wherever the die floats on
-// screen. No z-offset or face placement (that's what caused the off-centre
-// drift). Forwards a ref to the panel div.
+// The result number: a drei <Html> billboard floating IN FRONT of the die.
+// `position={[0,0,2.5]}` pushes it 2.5 units toward the camera from the group's
+// centre, so it reads as a clean overlay that never intersects an edge or face.
+// `center` keeps it anchored on the die's centre; `transform={false}` + `sprite`
+// keep it flat and facing the camera no matter how the die rotates. Forwards a
+// ref to the text node.
 export const OnFaceNumber = forwardRef<HTMLDivElement, { style: NumberStyle }>(
   function OnFaceNumber({ style }, ref) {
     return (
@@ -42,8 +39,8 @@ export const OnFaceNumber = forwardRef<HTMLDivElement, { style: NumberStyle }>(
         center
         sprite
         transform={false}
-        position={[0, 0, 0]}
-        zIndexRange={[10, 0]}
+        position={[0, 0, 2.5]}
+        zIndexRange={[20, 0]}
         pointerEvents="none"
         style={staticStyle(style)}
       />
@@ -73,17 +70,14 @@ export function playNumberReveal(
   }
   const isMax = value >= max;
   const isMin = value <= 1;
-  // Crit colours: a die may theme its own nat max / nat min (only the d20 does).
-  // Any die that doesn't keeps its normal, well-contrasted themed look on a crit
-  // — the celebration is carried by the die's body animation, not the number.
+  // Crit colour: a die may theme its own nat max / nat min (only the d20 does);
+  // any die that doesn't keeps its normal themed colour, leaning on its body
+  // animation for the celebration. No background — readability is the shadow.
   const maxColor = style.maxColor ?? style.color;
-  const maxBg = style.maxBackground ?? style.background;
   const minColor = style.minColor ?? style.color;
-  const minBg = style.minBackground ?? style.background;
 
   el.textContent = String(value);
   el.style.color = isMax ? maxColor : isMin ? minColor : style.color;
-  el.style.background = isMax ? maxBg : isMin ? minBg : style.background;
   gsap.killTweensOf(el);
   // Number fades in over 0.3s AFTER the die has landed; the bubble follows once
   // it's shown.

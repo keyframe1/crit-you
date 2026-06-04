@@ -74,17 +74,19 @@ export default function DInf({ rollNonce, onResult }: Props) {
   const rollingRef = useRef(false); // gates the idle spin
   const lockRef = useRef(false); // gates input through the whole roll + reveal
   const rollGenRef = useRef(0); // increments each roll; stale reactions bail
+  const boostRef = useRef(true); // exaggerated idle float until the first roll
 
   const onResultRef = useRef(onResult);
   useEffect(() => {
     onResultRef.current = onResult;
   }, [onResult]);
 
-  const { startIdle, killIdle } = useIdleFloat(groupRef, rollingRef, {
-    spinSpeed: 0.04,
-    floatY: 0.2,
-    floatDuration: 5.0,
-  });
+  const { startIdle, killIdle } = useIdleFloat(
+    groupRef,
+    rollingRef,
+    { spinSpeed: 0.04, floatY: 0.2, floatDuration: 5.0 },
+    boostRef
+  );
 
   // Stars (3 tiers) + constellation segments between bright stars, generated
   // once. All randomness is seeded so this stays pure during render.
@@ -242,6 +244,7 @@ export default function DInf({ rollNonce, onResult }: Props) {
     if (!g || lockRef.current) return;
     lockRef.current = true;
     rollingRef.current = true;
+    boostRef.current = false; // first roll calms the exaggerated idle float
     // Generation token: the cosmic nat-1 recovery runs longer than the input
     // lock, so a stale resume from a previous roll must not resume idle once a
     // newer roll has taken over.
@@ -342,9 +345,10 @@ export default function DInf({ rollNonce, onResult }: Props) {
           // The number glows brighter for 1s, then settles back to its theme.
           const numEl = numRef.current;
           if (numEl) {
-            numEl.style.textShadow = "0 0 24px rgba(148,184,255,0.9), 0 0 8px rgba(148,184,255,0.7)";
+            numEl.style.textShadow =
+              "0 2px 8px rgba(0,0,0,0.6), 0 0 28px rgba(148,184,255,0.95), 0 0 12px rgba(148,184,255,0.8)";
             gsap.delayedCall(1.0, () => {
-              if (numEl) numEl.style.textShadow = "0 0 12px rgba(148,184,255,0.5)";
+              if (numEl) numEl.style.textShadow = NUMBER_STYLES.dinf.textShadow;
             });
           }
           gsap.delayedCall(1.0, () => {

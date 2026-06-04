@@ -61,9 +61,10 @@ export default function ShareCard({ roll }: { roll: Roll | null }) {
         onClick={handleShare}
         disabled={!roll}
         aria-label="Share roll"
-        className="p-2 -m-2 text-[var(--ink)] hover:text-[var(--accent)] transition-colors duration-200 disabled:opacity-25 disabled:hover:text-[var(--ink)]"
+        className="flex items-center gap-1.5 rounded-[20px] px-[14px] py-1.5 text-[13px] font-medium text-[var(--ink)] bg-black/5 hover:bg-black/[0.08] transition-colors duration-200 disabled:opacity-30 disabled:bg-black/5 disabled:cursor-default"
       >
-        <Share2 size={18} strokeWidth={1.75} />
+        <Share2 size={15} strokeWidth={2} />
+        <span className="hidden sm:inline tracking-wide">Share</span>
       </button>
 
       <AnimatePresence>

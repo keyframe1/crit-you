@@ -205,13 +205,17 @@ export const BUBBLE_STYLES: Record<DieType, BubbleStyle> = {
   },
 };
 
-// ─── On-face result number styling ───────────────────────────────────────────
-// The number that fades in on the die after it lands. It mirrors each die's
-// speech-bubble voice (same font family, weight, colour family) so the number
-// and the line read as one personality. Rendered by components/dice3d/dieNumber.
-// Crit overrides (maxColor/maxBackground/minColor/minBackground) are optional: a
-// die that omits them keeps its normal themed look on a nat max/min, leaning on
-// its body animation for the celebration. Only the d20 recolours its number.
+// ─── Result number styling ───────────────────────────────────────────────────
+// The number that fades in AFTER the die lands. It floats in front of the die as
+// raw text (no background box) — a strong double text-shadow keeps it readable
+// over any die colour or edge line. Each style mirrors its die's speech-bubble
+// voice (font family, weight, colour). Rendered by components/dice3d/dieNumber.
+// Crit colour overrides (maxColor/minColor) are optional: only the d20 recolours
+// its number on a nat max/min; every other die leans on its body animation.
+//
+// The shared readability shadow; d10 and d∞ append their signature glow.
+const NUM_SHADOW = "0 2px 8px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.3)";
+
 export interface NumberStyle {
   fontFamily: string;
   fontWeight: number;
@@ -219,11 +223,8 @@ export interface NumberStyle {
   fontSize: string;
   color: string;
   textShadow: string;
-  background: string;
   maxColor?: string;
-  maxBackground?: string;
   minColor?: string;
-  minBackground?: string;
 }
 
 export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
@@ -234,8 +235,7 @@ export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
     fontStyle: "normal",
     fontSize: "clamp(28px, 7.5vw, 36px)",
     color: "#e84c3d",
-    textShadow: "0 1px 2px rgba(0,0,0,0.6)",
-    background: "rgba(26,10,10,0.5)",
+    textShadow: NUM_SHADOW,
   },
   // D6 — plain grey sans, normal weight. It's boring, on purpose.
   d6: {
@@ -243,9 +243,8 @@ export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
     fontWeight: 400,
     fontStyle: "normal",
     fontSize: "clamp(28px, 7.5vw, 36px)",
-    color: "#888888",
-    textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-    background: "rgba(245,245,240,0.4)",
+    color: "#bdbdb6",
+    textShadow: NUM_SHADOW,
   },
   // D8 — italic bold teal, matching the anxious-earnest bubble.
   d8: {
@@ -253,19 +252,17 @@ export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
     fontWeight: 700,
     fontStyle: "italic",
     fontSize: "clamp(28px, 7.5vw, 36px)",
-    color: "#2a9d8f",
-    textShadow: "0 1px 2px rgba(0,0,0,0.4)",
-    background: "rgba(240,250,250,0.4)",
+    color: "#54c4b6",
+    textShadow: NUM_SHADOW,
   },
-  // D10 — terminal-green mono with a faint glow. Data readout.
+  // D10 — terminal-green mono with its signature glow. Data readout.
   d10: {
     fontFamily: MONO,
     fontWeight: 400,
     fontStyle: "normal",
     fontSize: "clamp(28px, 7.5vw, 36px)",
     color: "#27ae60",
-    textShadow: "0 0 6px rgba(39,174,96,0.4)",
-    background: "rgba(10,26,10,0.5)",
+    textShadow: `${NUM_SHADOW}, 0 0 10px rgba(39,174,96,0.6)`,
   },
   // D12 — bold gold, a touch larger than the rest. Theatrical.
   d12: {
@@ -274,23 +271,19 @@ export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
     fontStyle: "normal",
     fontSize: "clamp(30px, 8vw, 40px)",
     color: "#f0d878",
-    textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-    background: "rgba(26,21,8,0.5)",
+    textShadow: NUM_SHADOW,
   },
-  // D20 — the benchmark: bold cream mono. Recolours on a crit (crimson nat 20,
-  // dim grey nat 1) — the only die that themes its number for max/min.
+  // D20 — the benchmark: bold cream mono. Recolours on a crit (white nat 20, dim
+  // grey nat 1) — the only die that themes its number for max/min.
   d20: {
     fontFamily: MONO,
     fontWeight: 700,
     fontStyle: "normal",
     fontSize: "clamp(28px, 7.5vw, 36px)",
-    color: "#e8e4dc",
-    textShadow: "0 2px 4px rgba(0,0,0,0.5)",
-    background: "rgba(0,0,0,0.3)",
+    color: "#f0ece4",
+    textShadow: NUM_SHADOW,
     maxColor: "#ffffff",
-    maxBackground: "rgba(192,57,43,0.4)",
-    minColor: "#888888",
-    minBackground: "rgba(0,0,0,0.15)",
+    minColor: "#999999",
   },
   // D30 — light (300) lavender sans. Elegant, exotic.
   d30: {
@@ -299,8 +292,7 @@ export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
     fontStyle: "normal",
     fontSize: "clamp(28px, 7.5vw, 36px)",
     color: "#c89eec",
-    textShadow: "0 1px 2px rgba(0,0,0,0.4)",
-    background: "rgba(21,10,32,0.5)",
+    textShadow: NUM_SHADOW,
   },
   // D∞ — light ice-blue sans with a cosmic glow.
   dinf: {
@@ -309,7 +301,6 @@ export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
     fontStyle: "normal",
     fontSize: "clamp(28px, 7.5vw, 36px)",
     color: "#94b8ff",
-    textShadow: "0 0 12px rgba(148,184,255,0.5)",
-    background: "rgba(8,8,24,0.4)",
+    textShadow: `${NUM_SHADOW}, 0 0 14px rgba(148,184,255,0.6)`,
   },
 };
