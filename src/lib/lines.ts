@@ -19,7 +19,7 @@ const RANGES: Record<DieType, { lowMax: number; midMax: number }> = {
   d8: { lowMax: 3, midMax: 5 }, // 2-3 low · 4-5 mid · 6-7 high
   d10: { lowMax: 3, midMax: 7 }, // 2-3 low · 4-7 mid · 8-9 high
   d12: { lowMax: 4, midMax: 8 }, // 2-4 low · 5-8 mid · 9-11 high
-  d20: { lowMax: 5, midMax: 15 }, // 2-5 low · 6-15 mid · 16-19 high
+  d20: { lowMax: 5, midMax: 14 }, // 2-5 low · 6-14 mid · 15-19 high
   d30: { lowMax: 8, midMax: 21 }, // 2-8 low · 9-21 mid · 22-29 high
   dinf: { lowMax: 25, midMax: 75 }, // 2-25 low · 26-75 mid · 76-99 high (d100)
 };
@@ -297,9 +297,11 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Seven! Tell the d20 I said hi. Tell it I did a seven. Casually.",
       "Look at me go! Six! I'm having a moment — let me have this!",
       "Seven. That's basically a crit for me. Right? That's basically perfect, RIGHT?",
+      "I'm something of a damage die myself.",
     ],
     nat_max: [
       "EIGHT! Did you see that? Did everyone see that?",
+      "Look at me. I am the die now.",
       "I DID IT. Screenshot this. Tell the other dice.",
       "EIGHT! My maximum! The whole octahedron! I'm SOMEBODY!",
       "Natural eight! Put me on the shelf! The GOOD shelf! Next to the d20!",
@@ -430,9 +432,12 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "A ten! This is my second act! This is my redemption! Roll the music!",
       "Eleven out of twelve. I have NEVER been closer to greatness. Document this.",
       "Nine! NINE! Somewhere, a d4 weeps with envy. As it should!",
+      "I'm not locked in here with you. You're locked in here with ME!",
     ],
     nat_max: [
       "TWELVE! TWELVE! I AM THE GREATEST DIE EVER CREATED! WRITE IT DOWN!",
+      "WITNESS ME!",
+      "This. Is. TWELVE!",
       "NATURAL TWELVE. Put me in the dice tower. RETIRE MY NUMBER.",
       "TWELVE! After all the doubt! After all the WEEKS! VINDICATION!",
       "MAXIMUM! Tell the d20! Tell it to its smug little face! TWELVE!",
@@ -513,9 +518,12 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "That's the number that keeps me on the poster.",
       "Big, bold, just shy of legendary. Like a good trailer.",
       "See? This is why every important roll comes through me.",
+      "Call an ambulance. But not for me.",
     ],
     nat_max: [
       "Natural twenty. Was there ever any doubt?",
+      "I am inevitable.",
+      "With great power comes great nat twenties.",
       "Critical hit. This is why they don't let the d12 handle the important rolls.",
       "Twenty. I'd say I'm surprised, but I'm contractually the hero.",
       "Perfect. Roll credits. I'll be in my velvet case if anyone needs me.",
@@ -566,6 +574,7 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "A four. I have twenty-six finer outcomes and you ignored every one of them.",
       "How quaint, a small number. The d8 feels validated, and I despise it for that.",
       "Seven. You've reduced an exotic instrument to a parlor trick. Bravo. Truly.",
+      "I find your lack of sides... disturbing.",
     ],
     mid: [
       "Functional. If you wanted functional, you could have used a d20 like everyone else.",
@@ -586,6 +595,7 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Twenty-eight. The d20 has never produced this number and never will. Sit with that.",
       "Twenty-three. NOW you see why you chose the exotic option. You're learning.",
       "A high roll, by my exacting standards. I shall permit a small, regal nod.",
+      "You merely adopted the high numbers. I was born in them.",
     ],
     nat_max: [
       "Thirty. Perfection. Most players will never experience this.",
@@ -657,6 +667,7 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "A number. In a universe of numbers. Next.",
       "The oracle has seen better. The oracle has seen worse.",
       "Even infinity gets bored sometimes.",
+      "In space, no one can hear you roll.",
     ],
     high: [
       "The constellations align in your favor. For now.",
@@ -673,6 +684,7 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Almost transcendent. Almost.",
       "The nebula glows a little brighter.",
       "High orbit. Not escape velocity, but close.",
+      "The truth is out there. It's this number.",
     ],
     nat_max: [
       "One hundred. The universe bends. Even I am impressed.",
@@ -689,6 +701,7 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Across infinite timelines, this one chose you.",
       "The cosmos says: yes.",
       "Destiny rolled. Destiny won.",
+      "It's full of stars.",
     ],
   },
 };

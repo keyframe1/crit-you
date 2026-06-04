@@ -1,0 +1,206 @@
+// Per-die speech-bubble styling. Each die's bubble is a visual extension of its
+// personality (see lib/lines.ts for the voice): the angry caltrop gets sharp
+// crimson corners, the basic d6 a beige corporate panel, the celestial d∞ a
+// glowing window into deep space. Personality.tsx reads BUBBLE_STYLES[dieType]
+// and applies the matching look; the notch (the little triangle pointing down at
+// the die) inherits each bubble's fill + border so it always matches.
+
+import type { CSSProperties } from "react";
+import type { DieType } from "@/lib/dice";
+
+// Font stacks mirror globals.css (--font-sans / --font-mono); spelled out here so
+// a bubble can pick mono or sans independently of the page default.
+const MONO = "var(--font-geist-mono), ui-monospace, monospace";
+const SANS = "var(--font-geist-sans), system-ui, sans-serif";
+
+export interface BubbleStyle {
+  // Bubble body
+  background: string;
+  border: string; // CSS border shorthand
+  borderRadius: string;
+  boxShadow: string; // "none" when the die wants a flat bubble
+  padding: string;
+  // Text
+  color: string;
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: number;
+  fontStyle: CSSProperties["fontStyle"];
+  letterSpacing: string;
+  textTransform: CSSProperties["textTransform"];
+  lineHeight: number;
+  // d12 only: a nat_max line goes italic for extra theatrical drama.
+  italicOnNatMax?: boolean;
+  // Notch — a rotated square whose two lower edges carry the border, reading as a
+  // triangle aimed at the die. It mirrors the bubble's fill + edge.
+  notchBg: string;
+  notchBorderColor: string;
+  notchBorderWidth: string;
+  notchRadius: string;
+}
+
+export const BUBBLE_STYLES: Record<DieType, BubbleStyle> = {
+  // D4 — THE CALTROP. Sharp, angular, aggressive; terse military-briefing red.
+  d4: {
+    background: "#1a0a0a",
+    border: "1px solid #c0392b",
+    borderRadius: "2px",
+    boxShadow: "none",
+    padding: "11px 18px",
+    color: "#e84c3d",
+    fontFamily: MONO,
+    fontSize: "13px",
+    fontWeight: 400,
+    fontStyle: "normal",
+    letterSpacing: "0.05em",
+    textTransform: "uppercase",
+    lineHeight: 1.5,
+    notchBg: "#1a0a0a",
+    notchBorderColor: "#c0392b",
+    notchBorderWidth: "1px",
+    notchRadius: "0px",
+  },
+  // D6 — THE BASIC. Standard rounded beige panel. The corporate-email die.
+  d6: {
+    background: "#f5f5f0",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    boxShadow: "none",
+    padding: "12px 20px",
+    color: "#555555",
+    fontFamily: SANS,
+    fontSize: "14px",
+    fontWeight: 400,
+    fontStyle: "normal",
+    letterSpacing: "normal",
+    textTransform: "none",
+    lineHeight: 1.5,
+    notchBg: "#f5f5f0",
+    notchBorderColor: "#ddd",
+    notchBorderWidth: "1px",
+    notchRadius: "2px",
+  },
+  // D8 — THE MIDDLE CHILD. Over-rounded, light teal, italic (earnest/insecure).
+  d8: {
+    background: "#f0fafa",
+    border: "1px solid #2a9d8f40",
+    borderRadius: "16px",
+    boxShadow: "none",
+    padding: "12px 20px",
+    color: "#1a6b62",
+    fontFamily: SANS,
+    fontSize: "14px",
+    fontWeight: 400,
+    fontStyle: "italic",
+    letterSpacing: "normal",
+    textTransform: "none",
+    lineHeight: 1.5,
+    notchBg: "#f0fafa",
+    notchBorderColor: "#2a9d8f40",
+    notchBorderWidth: "1px",
+    notchRadius: "3px",
+  },
+  // D10 — THE STATISTICIAN. Zero-radius terminal readout; mandatory monospace.
+  d10: {
+    background: "#0a1a0a",
+    border: "1px solid #27ae6060",
+    borderRadius: "0px",
+    boxShadow: "none",
+    padding: "11px 18px",
+    color: "#27ae60",
+    fontFamily: MONO,
+    fontSize: "13px",
+    fontWeight: 400,
+    fontStyle: "normal",
+    letterSpacing: "normal",
+    textTransform: "none",
+    lineHeight: 1.5,
+    notchBg: "#0a1a0a",
+    notchBorderColor: "#27ae6060",
+    notchBorderWidth: "1px",
+    notchRadius: "0px",
+  },
+  // D12 — THE UNDERDOG. Thicker gold border (DRAMA), larger text + padding, bold;
+  // a nat_max line tips into italic. Theater-marquee energy.
+  d12: {
+    background: "#1a1508",
+    border: "2px solid #d4a843",
+    borderRadius: "12px",
+    boxShadow: "none",
+    padding: "14px 24px",
+    color: "#f0d878",
+    fontFamily: SANS,
+    fontSize: "15px",
+    fontWeight: 700,
+    fontStyle: "normal",
+    letterSpacing: "normal",
+    textTransform: "none",
+    lineHeight: 1.45,
+    italicOnNatMax: true,
+    notchBg: "#1a1508",
+    notchBorderColor: "#d4a843",
+    notchBorderWidth: "2px",
+    notchRadius: "2px",
+  },
+  // D20 — THE MAIN CHARACTER. The benchmark: clean white, soft shadow, dry mono.
+  d20: {
+    background: "#ffffff",
+    border: "1px solid rgba(0,0,0,0.08)",
+    borderRadius: "10px",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+    padding: "12px 20px",
+    color: "#1a1a18",
+    fontFamily: MONO,
+    fontSize: "14px",
+    fontWeight: 400,
+    fontStyle: "normal",
+    letterSpacing: "normal",
+    textTransform: "none",
+    lineHeight: 1.5,
+    notchBg: "#ffffff",
+    notchBorderColor: "rgba(0,0,0,0.08)",
+    notchBorderWidth: "1px",
+    notchRadius: "2px",
+  },
+  // D30 — THE EXOTIC. Deep purple-black, light (300) airy type. Gallery placard.
+  d30: {
+    background: "#150a20",
+    border: "1px solid #8e44ad50",
+    borderRadius: "12px",
+    boxShadow: "none",
+    padding: "12px 20px",
+    color: "#c89eec",
+    fontFamily: SANS,
+    fontSize: "14px",
+    fontWeight: 300,
+    fontStyle: "normal",
+    letterSpacing: "0.03em",
+    textTransform: "none",
+    lineHeight: 1.55,
+    notchBg: "#150a20",
+    notchBorderColor: "#8e44ad50",
+    notchBorderWidth: "1px",
+    notchRadius: "2px",
+  },
+  // D∞ — THE CELESTIAL. Deep-space blue-black with an outer ice-blue glow; soft,
+  // ethereal, light type. A transmission from far away.
+  dinf: {
+    background: "#080818",
+    border: "1px solid rgba(148,184,255,0.2)",
+    borderRadius: "20px",
+    boxShadow: "0 0 20px rgba(148,184,255,0.08)",
+    padding: "12px 22px",
+    color: "#94b8ff",
+    fontFamily: SANS,
+    fontSize: "14px",
+    fontWeight: 300,
+    fontStyle: "normal",
+    letterSpacing: "0.04em",
+    textTransform: "none",
+    lineHeight: 1.55,
+    notchBg: "#080818",
+    notchBorderColor: "rgba(148,184,255,0.2)",
+    notchBorderWidth: "1px",
+    notchRadius: "3px",
+  },
+};
