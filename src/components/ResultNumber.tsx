@@ -4,94 +4,81 @@ import type { CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { DieType, Roll } from "@/lib/dice";
 
-// Per-die styling for the result number. Each die's number echoes its speech-
-// bubble voice (font family, weight, colour); a natural max brightens it and a
-// natural 1 dims it. This is the ONLY place the result number is styled — it is
-// plain DOM text, never a Three.js <Html> billboard, so it can't drift, z-fight,
-// or land on an edge.
+// Per-die styling for the result number. Every number is bold (800) white text
+// with a crisp 4-directional outline in the die's dark signature colour, so it
+// punches through against any face shade behind it — no thin or light fonts on
+// any die. A natural max adds a warm crit glow; a natural 1 dims to grey with the
+// outline only. This is the ONLY place the result number is styled — it is plain
+// DOM text, never a Three.js <Html> billboard, so it can't drift, z-fight, or
+// land on an edge.
+const MONO = "var(--font-geist-mono)";
+const SANS = "var(--font-geist-sans)";
+const SIZE = "clamp(32px, 8vw, 44px)";
+// The warm glow layer every die's number gains on a natural max.
+const MAX_GLOW = "0 0 16px rgba(255,220,100,0.5)";
+
+interface NumConfig {
+  font: string;
+  size: string;
+  outlineColor: string; // dark signature colour for the 1px outline
+  depth: string; // soft black drop-shadow for depth (dropped on a nat 1)
+  glow?: string; // optional signature coloured glow (mid + max)
+  maxGlow?: string; // optional extra glow only on a natural max (the d20 crit)
+}
+
+const NUM: Record<DieType, NumConfig> = {
+  d4: { font: MONO, size: SIZE, outlineColor: "#6b1a14", depth: "0 3px 10px rgba(0,0,0,0.6)" },
+  d6: { font: SANS, size: SIZE, outlineColor: "#3a3835", depth: "0 3px 10px rgba(0,0,0,0.5)" },
+  d8: { font: SANS, size: SIZE, outlineColor: "#155550", depth: "0 3px 10px rgba(0,0,0,0.5)" },
+  d10: {
+    font: MONO, size: SIZE, outlineColor: "#145530", depth: "0 3px 10px rgba(0,0,0,0.5)",
+    glow: "0 0 10px rgba(39,174,96,0.4)",
+  },
+  d12: {
+    font: SANS, size: "clamp(36px, 9vw, 48px)", outlineColor: "#6b5420", depth: "0 3px 10px rgba(0,0,0,0.5)",
+    glow: "0 0 8px rgba(212,168,67,0.3)",
+  },
+  d20: {
+    font: MONO, size: SIZE, outlineColor: "#5a1a14", depth: "0 3px 10px rgba(0,0,0,0.6)",
+    maxGlow: "0 0 20px rgba(255,200,100,0.6)",
+  },
+  d30: { font: SANS, size: SIZE, outlineColor: "#3a1a50", depth: "0 3px 10px rgba(0,0,0,0.5)" },
+  dinf: {
+    font: SANS, size: SIZE, outlineColor: "#1a2040", depth: "0 3px 10px rgba(0,0,0,0.5)",
+    glow: "0 0 16px rgba(148,184,255,0.5)",
+  },
+};
+
+// A 4-directional 1px text-shadow that crisply outlines the white glyph.
+function outline(c: string): string {
+  return `-1px -1px 0 ${c}, 1px -1px 0 ${c}, -1px 1px 0 ${c}, 1px 1px 0 ${c}`;
+}
+
 function getNumberStyle(dieType: DieType, result: number, max: number): CSSProperties {
   const isMax = result === max;
   const isMin = result === 1;
+  const cfg = NUM[dieType] ?? NUM.d20;
+  const ol = outline(cfg.outlineColor);
 
-  const base: CSSProperties = {
+  // nat 1: outline only (no glow, no depth) — diminished. nat max: outline +
+  // every glow this die carries + the warm crit glow + depth. otherwise: outline
+  // + the die's signature glow (if any) + depth.
+  const textShadow = isMin
+    ? ol
+    : isMax
+    ? [ol, cfg.glow, cfg.maxGlow, MAX_GLOW, cfg.depth].filter(Boolean).join(", ")
+    : [ol, cfg.glow, cfg.depth].filter(Boolean).join(", ");
+
+  return {
     pointerEvents: "none",
     userSelect: "none",
     lineHeight: 1,
+    fontFamily: cfg.font,
+    fontWeight: 800,
+    fontSize: cfg.size,
+    color: isMin ? "#aaaaaa" : "#ffffff",
+    textShadow,
   };
-
-  const styles: Record<DieType, CSSProperties> = {
-    d4: {
-      ...base,
-      fontFamily: "var(--font-geist-mono)",
-      fontWeight: 700,
-      fontSize: "clamp(32px, 8vw, 44px)",
-      color: isMax ? "#ff4444" : isMin ? "#666" : "#e84c3d",
-      textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-    },
-    d6: {
-      ...base,
-      fontFamily: "var(--font-geist-sans)",
-      fontWeight: 400,
-      fontSize: "clamp(32px, 8vw, 44px)",
-      color: isMax ? "#555" : isMin ? "#bbb" : "#888",
-      textShadow: "0 1px 4px rgba(0,0,0,0.3)",
-    },
-    d8: {
-      ...base,
-      fontFamily: "var(--font-geist-sans)",
-      fontWeight: 700,
-      fontStyle: "italic",
-      fontSize: "clamp(32px, 8vw, 44px)",
-      color: isMax ? "#1fe0cc" : isMin ? "#666" : "#2a9d8f",
-      textShadow: "0 2px 6px rgba(0,0,0,0.4)",
-    },
-    d10: {
-      ...base,
-      fontFamily: "var(--font-geist-mono)",
-      fontWeight: 400,
-      fontSize: "clamp(32px, 8vw, 44px)",
-      color: isMax ? "#33ff66" : isMin ? "#666" : "#27ae60",
-      textShadow: "0 0 8px rgba(39,174,96,0.4)",
-    },
-    d12: {
-      ...base,
-      fontFamily: "var(--font-geist-sans)",
-      fontWeight: 700,
-      fontSize: "clamp(36px, 9vw, 48px)",
-      color: isMax ? "#ffe066" : isMin ? "#666" : "#f0d878",
-      textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-    },
-    d20: {
-      ...base,
-      fontFamily: "var(--font-geist-mono)",
-      fontWeight: 700,
-      fontSize: "clamp(32px, 8vw, 44px)",
-      color: isMax ? "#ffffff" : isMin ? "#888" : "#e8e4dc",
-      textShadow: isMax
-        ? "0 0 20px rgba(192,57,43,0.8), 0 2px 8px rgba(0,0,0,0.5)"
-        : "0 2px 8px rgba(0,0,0,0.5)",
-    },
-    d30: {
-      ...base,
-      fontFamily: "var(--font-geist-sans)",
-      fontWeight: 300,
-      fontSize: "clamp(32px, 8vw, 44px)",
-      color: isMax ? "#e0b0ff" : isMin ? "#666" : "#c89eec",
-      textShadow: "0 2px 6px rgba(0,0,0,0.4)",
-    },
-    dinf: {
-      ...base,
-      fontFamily: "var(--font-geist-sans)",
-      fontWeight: 300,
-      fontSize: "clamp(32px, 8vw, 44px)",
-      color: isMax ? "#c0d8ff" : isMin ? "#445" : "#94b8ff",
-      textShadow: isMax
-        ? "0 0 16px rgba(148,184,255,0.6), 0 2px 6px rgba(0,0,0,0.4)"
-        : "0 2px 6px rgba(0,0,0,0.4)",
-    },
-  };
-
-  return styles[dieType] || styles.d20;
 }
 
 // The d10's failure is a data-glitch: on a natural 1 its number stutters in
