@@ -1,12 +1,20 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Dice from "@/components/Dice";
 import Personality from "@/components/Personality";
 import DiceSelector from "@/components/DiceSelector";
 import ShareCard from "@/components/ShareCard";
-import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
+import { DEFAULT_DIE, is3DDie, maxFor, type DieType, type Roll } from "@/lib/dice";
 import { pickLine } from "@/lib/lines";
+
+// The Three.js stage is client-only (WebGL needs the browser) and heavy, so it's
+// code-split out of the initial bundle. `ssr: false` is allowed here because
+// page.tsx is itself a Client Component.
+const DiceCanvas = dynamic(() => import("@/components/DiceCanvas"), {
+  ssr: false,
+});
 
 export default function Home() {
   const [dieType, setDieType] = useState<DieType>(DEFAULT_DIE);
@@ -49,7 +57,13 @@ export default function Home() {
       {/* Speech bubble above, die below (with its result number inside). */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-4">
         <Personality roll={roll} />
-        <Dice dieType={dieType} onRoll={handleRoll} />
+        {/* The d20 is a real 3D die on the shared Three.js stage; the rest still
+            render as flat SVG until each is ported. */}
+        {is3DDie(dieType) ? (
+          <DiceCanvas dieType={dieType} onRoll={handleRoll} />
+        ) : (
+          <Dice dieType={dieType} onRoll={handleRoll} />
+        )}
       </div>
 
       <div className="shrink-0">
