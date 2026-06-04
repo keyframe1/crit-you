@@ -4,22 +4,41 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const viewport: Viewport = {
-  themeColor: "#1a1a18",
+  themeColor: "#0a0a0a",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export const metadata: Metadata = {
-  title: "Reroll Gaming | Marrero, LA",
-  description: "Trading card games, organized play, and community. Marrero's only dedicated game store.",
+  title: "Crit | Your dice have opinions.",
+  description:
+    "Premium dice roller with personality. Roll, get roasted, share. crit.you",
+  applicationName: "Crit",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Crit",
+  },
   openGraph: {
-    title: "Reroll Gaming",
-    description: "Cards, community, and competitive play. Marrero, Louisiana.",
+    title: "Crit",
+    description: "Your dice have opinions.",
     type: "website",
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html
+      lang="en"
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+    >
       <body className="font-sans">{children}</body>
     </html>
   );

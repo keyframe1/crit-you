@@ -1,153 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #ffffff;
-  --color-ink: #1a1a18;
+  --color-bg: #0a0a0a;
+  --color-accent: #c0392b;
   --color-mid: #666660;
   --color-light: #aaa8a0;
-  --color-faint: #ddd8cc;
-  --color-accent: #c0392b;
-  --color-accent-glow: rgba(192, 57, 43, 0.12);
 
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 :root {
-  --bg: var(--color-bg);
-  --ink: var(--color-ink);
-  --mid: var(--color-mid);
-  --light: var(--color-light);
-  --faint: var(--color-faint);
-  --accent: var(--color-accent);
-  --accent-glow: var(--color-accent-glow);
+  --bg: #0a0a0a;
+  --accent: #c0392b;
+  --mid: #666660;
+  --light: #aaa8a0;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-ink);
-  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--light);
   font-family: var(--font-sans);
-}
-
-html { scroll-behavior: smooth; }
-
-.sep {
-  height: 1px;
-  background: var(--color-faint);
-  max-width: 960px;
-  margin: 0 auto;
-  border: none;
-}
-
-@keyframes statsSlideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to   { transform: translateY(0); opacity: 1; }
-}
-
-.nav-link {
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  opacity: 0.6;
-  transition: opacity 0.2s ease-out;
-}
-.nav-link:hover {
-  opacity: 1;
-}
-
-.social-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
-  border-radius: 12px;
-  padding: 1.5rem;
-  transition: border-color 0.3s ease-out, transform 0.3s ease-out,
-    box-shadow 0.3s ease-out;
-}
-.social-card svg {
-  color: #2d2a26;
-  transition: color 0.3s ease-out;
-}
-/* Diagonal highlight that sweeps left-to-right on hover (CSS only). */
-.social-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: translateX(-100%);
-  pointer-events: none;
-}
-.social-card:hover {
-  border-color: var(--brand);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-.social-card:hover svg {
-  color: var(--brand);
-}
-.social-card:hover::before {
-  animation: social-shimmer 0.6s ease-out;
-}
-
-@keyframes social-shimmer {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
-
-/* D Twenty's speech bubble. Positioning is handled by an outer wrapper (so
-   GSAP can own this element's transform for the scale/translate animation);
-   transform-origin sits at the tail so it grows up from the die. */
-.speech-bubble {
-  position: relative;
-  max-width: 220px;
-  padding: 12px 16px;
-  background: #ffffff;
-  border: 1px solid rgba(45, 42, 38, 0.2);
-  border-radius: 12px;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  color: #2d2a26;
-  text-align: left;
-  transform-origin: bottom center;
-  opacity: 0;
-}
-/* Triangular tail: a border-colored triangle with a white triangle layered
-   just above it, leaving a 1px rim so the tail reads as bordered. */
-.speech-bubble::before,
-.speech-bubble::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  margin-left: -8px;
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-}
-.speech-bubble::before {
-  bottom: -9px;
-  border-top: 9px solid rgba(45, 42, 38, 0.2);
-}
-.speech-bubble::after {
-  bottom: -7px;
-  border-top: 8px solid #ffffff;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }

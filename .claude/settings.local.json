@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "PowerShell(Stop-Process -Id 29080 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process -Id 29080 -ErrorAction SilentlyContinue)",
+      "PowerShell(if \\($?\\) { \"leftover dev server \\(PID 29080\\) killed\" } else { \"PID 29080 not running\" })",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git check-ignore *)",
+      "Bash(git commit *)",
+      "Bash(npm run *)",
+      "Bash(python -c \"from PIL import Image; im=Image.open\\('public/header2.png'\\); print\\('mode:', im.mode\\); print\\('size:', im.size\\); print\\('has_alpha:', im.mode in \\('RGBA','LA'\\) or 'transparency' in im.info\\)\")",
+      "Bash(node scripts/gen-icons.mjs)",
+      "Bash(rm -f \"/c/Users/antho/package-lock.json\")",
+      "Bash(echo \"DELETED stray C:\\\\\\\\Users\\\\\\\\antho\\\\\\\\package-lock.json\")",
+      "Bash(echo \"no stray lockfile at C:\\\\\\\\Users\\\\\\\\antho\\\\\\\\package-lock.json\")",
+      "Bash(git remote *)",
+      "Bash(git config *)"
     ]
   }
 }
