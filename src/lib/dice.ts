@@ -366,6 +366,32 @@ const D12_ANIM: AnimConfig = {
   numberFail: "delay-slow",
 };
 
+// ═══ D30 — "The Exotic" ═══
+// Pretentious and unhurried. Thinks it's above the common dice and that you
+// should wait for it — so everything it does takes a little longer: a slower
+// idle drift, a grander tumble, a regal celebration in no hurry, and a stunned
+// freeze on a failure it believed itself above.
+const D30_ANIM: AnimConfig = {
+  float: { y: 4, rotateX: 2, duration: 3.5 }, // slower, grander drift
+  tumble: {
+    p1Dur: 0.5, // a longer, unhurried wind-up — royalty doesn't rush
+    p1Ease: "power2.in",
+    rotateZ: 30,
+    scale: 0.82,
+    p2Dur: 0.45,
+    p2Ease: "back.out(2)",
+  },
+  glowOpacity: 0.7,
+  // Slow regal pulse: rise, hold the pose, return. No rush.
+  celebrate: [
+    { to: { scale: 1.15 }, duration: 0.4, ease: "power2.inOut" },
+    { to: { scale: 1 }, duration: 0.6, delay: 0.4, ease: "power2.inOut" },
+  ],
+  // Freezes in stunned silence, then slowly resumes its idle drift.
+  fail: [{ hold: 0.5 }],
+  numberFail: "spring",
+};
+
 // Each die starts as the benchmark; its own commit dials in its character.
 export const ANIM: Record<DieType, AnimConfig> = {
   d4: D4_ANIM,
@@ -374,7 +400,7 @@ export const ANIM: Record<DieType, AnimConfig> = {
   d10: D10_ANIM,
   d12: D12_ANIM,
   d20: DEFAULT_ANIM, // d20 IS the benchmark — do not change it
-  d30: DEFAULT_ANIM,
+  d30: D30_ANIM,
 };
 
 export function animFor(type: DieType): AnimConfig {

@@ -453,6 +453,63 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Twenty out of twenty. The other dice are taking notes.",
     ],
   },
+  // ═══ D30 — "The Exotic" ═══
+  // Thinks it's better than everyone. Pretentious, references obscure rule
+  // variants, looks down on the "common" dice, and knows most people don't even
+  // know it exists.
+  d30: {
+    nat_min: [
+      "Impossible. I have thirty sides. Thirty. And you wasted them.",
+      "I left my custom velvet bag for this.",
+      "A one. Out of THIRTY. The probability is exquisite; the result is offensive.",
+      "One. Do you know how rare I am? Do you know what you just did to that rarity?",
+      "I am a collector's piece. I belong in a display case. And you rolled a ONE.",
+      "This is what comes of letting amateurs handle exotic polyhedra.",
+      "One. In the Lankhmar variant this would be grounds for forfeiting the campaign.",
+      "A natural one. I have never been so insulted, and I have met the d4.",
+      "Thirty faces of potential, and you found the one face unworthy of me.",
+    ],
+    low: [
+      "Pedestrian.",
+      "You're using a d30 to roll single digits. This is a misallocation of resources.",
+      "A six. You could have used a d6. You SHOULD have used a d6. Spare me.",
+      "Single digits. From me. Like commissioning a fresco and receiving a doodle.",
+      "Eight. The common dice reach for this. I was minted for loftier numbers.",
+      "A four. I have twenty-six finer outcomes and you ignored every one of them.",
+      "How quaint, a small number. The d8 feels validated, and I despise it for that.",
+      "Seven. You've reduced an exotic instrument to a parlor trick. Bravo. Truly.",
+    ],
+    mid: [
+      "Functional. If you wanted functional, you could have used a d20 like everyone else.",
+      "Average, relative to my range. I expected more from someone who chose me.",
+      "Fifteen. The exact middle. Even your mediocrity lacks ambition.",
+      "A seventeen. Adequate — the way a tasteful beige is adequate.",
+      "Twelve. You're nearly using me correctly. Nearly. Don't strain yourself.",
+      "Eighteen. Acceptable, in the way that 'acceptable' is faint praise.",
+      "Twenty-one. Now we approach numbers the lesser dice can only theorize about.",
+      "A middling result. For most dice this is the ceiling. For me, it's the foyer.",
+    ],
+    high: [
+      "Now you're beginning to deserve me.",
+      "Twenty-seven. Acceptable. The common dice could never.",
+      "Twenty-four. A number with breeding. A number that summers where the d20 fears to.",
+      "Twenty-nine. So close to perfection I can taste the velvet.",
+      "A twenty-six. Finally, a result befitting my reputation. Don't let it go to your head.",
+      "Twenty-eight. The d20 has never produced this number and never will. Sit with that.",
+      "Twenty-three. NOW you see why you chose the exotic option. You're learning.",
+      "A high roll, by my exacting standards. I shall permit a small, regal nod.",
+    ],
+    nat_max: [
+      "Thirty. Perfection. Most players will never experience this.",
+      "You have rolled a number the d20 can only dream about. Remember this feeling.",
+      "THIRTY. The summit. The apex. A number too refined for ordinary tables.",
+      "A natural thirty. You may tell people. They won't understand, but you may tell them.",
+      "Maximum. In the entire dice bag, only I could grant you this. Only I.",
+      "Thirty out of thirty. The d20 is, for once, speechless. Savor its silence.",
+      "Perfection, on thirty sides. Statistically rarer than the company you keep.",
+      "A natural thirty. Frame it in velvet. Light a candle. You've touched the exotic.",
+    ],
+  },
 };
 
 // Pick a line for a roll. Deterministic category, random line within it.
