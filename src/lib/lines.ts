@@ -283,6 +283,62 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Maximum! Did it count? It counted, right? Tell me it counted!",
     ],
   },
+  // ═══ D10 — "The Statistician" ═══
+  // Obsessed with probability, talks in percentages, technically precise and a
+  // little condescending about math. The nerdiest die in a hobby full of nerds.
+  d10: {
+    nat_min: [
+      "One. A 10% probability. Statistically unremarkable.",
+      "Bottom decile. Fascinating sample.",
+      "One. The expected value was 5.5. You've rounded yourself down out of spite.",
+      "A one. A one-in-ten event, and you collapsed the waveform onto it.",
+      "First percentile. I'd rerun it, but the numbers are clear and the numbers are sad.",
+      "One. Within probability, technically. Outside the realm of dignity.",
+      "You've produced the minimum. The variance on your competence is concerning.",
+      "A one. I'm not disappointed — I'm a number generator — but the data is bleak.",
+      "One out of ten. A perfectly valid data point. A perfectly tragic one.",
+    ],
+    low: [
+      "You're performing below the expected value of 5.5.",
+      "Third percentile. Suboptimal.",
+      "A two. That's roughly 1.4 standard deviations below the mean. I checked.",
+      "Three. You are reliably underperforming. At least the trend is clean.",
+      "Below average — and I mean that with mathematical precision, not as an insult. Mostly.",
+      "Two. The left tail of the distribution. We don't linger here; we can't afford to.",
+      "A three. I've modeled your luck. The R-squared is depressing.",
+      "Bottom tercile. The data does not flatter you, but the data does not lie.",
+    ],
+    mid: [
+      "You are within one standard deviation of the mean. Adequate.",
+      "Five point five is the expected value. You're approximating it.",
+      "A six. Mathematically the most boring outcome available. Congratulations.",
+      "Four. Comfortably inside the interquartile range. Comfortably forgettable.",
+      "Seven. Slightly above expectation. Do not extrapolate from one trial.",
+      "This is the fat part of the distribution — where most of you live, statistically.",
+      "A five. The mode would like a word, but the mean accepts you.",
+      "Within tolerance. Not significant. File it under 'noise.'",
+    ],
+    high: [
+      "Ninety-fifth percentile. Acceptable variance.",
+      "You're outperforming the mean. Don't read into it.",
+      "A nine. The 90th percentile. Statistically, you should quit while you're ahead.",
+      "Eight. Two standard deviations of competence. I'm logging this as an outlier.",
+      "Upper decile. Promising. Almost certainly not repeatable.",
+      "Nine. One short of significance. The universe does love a near-miss.",
+      "A high roll. I'll grant you a 1.3 z-score. Don't make it weird.",
+      "Eight out of ten. The right tail. Enjoy the thin air; the regression is coming.",
+    ],
+    nat_max: [
+      "Ten. Maximum output achieved. P-value significant.",
+      "Perfect score. I'm not emotional about it. I'm a number generator.",
+      "Ten out of ten. A 10% event has occurred. Document it; it won't recur soon.",
+      "The maximum. Three sigma above the mean. Statistically, a very big deal.",
+      "A natural ten. I appear to have goosebumps, which is interesting, as I have no skin.",
+      "Ten. The full deca. Probability honored its commitment. So, somehow, did you.",
+      "Maximum value. The distribution peaked in your favor. Treasure the anomaly.",
+      "Perfect. I've recalculated twice. It holds. You may, briefly, feel things.",
+    ],
+  },
   // ═══ D20 — "The Main Character" ═══
   // The star, and it knows it. Confident, dry, faintly bored by its own
   // importance. The benchmark personality everything else is measured against.

@@ -318,12 +318,35 @@ const D8_ANIM: AnimConfig = {
   numberFail: "spring",
 };
 
+// ═══ D10 — "The Statistician" ═══
+// Clinical, precise, obsessed with probability. Its tumble is tightly
+// controlled with almost no random spin, its celebration is a slow, dignified
+// pulse, and its failure glitches the result number like a calculator.
+const D10_ANIM: AnimConfig = {
+  float: { y: 4, rotateX: 2, duration: 2.5 },
+  tumble: {
+    p1Dur: 0.35,
+    p1Ease: "power2.in",
+    rotateZ: 10, // minimal randomness — precise, lands on clean angles
+    scale: 0.82,
+    p2Dur: 0.4,
+    p2Ease: "back.out(2.5)",
+  },
+  glowOpacity: 0.7,
+  // A slow, deliberate, dignified pulse.
+  celebrate: [
+    { keyframes: { scale: [1, 1.12, 1] }, duration: 0.8, ease: "power2.inOut" },
+  ],
+  fail: [], // the reaction is the number flickering like a glitching calculator
+  numberFail: "flicker",
+};
+
 // Each die starts as the benchmark; its own commit dials in its character.
 export const ANIM: Record<DieType, AnimConfig> = {
   d4: D4_ANIM,
   d6: D6_ANIM,
   d8: D8_ANIM,
-  d10: DEFAULT_ANIM,
+  d10: D10_ANIM,
   d12: DEFAULT_ANIM,
   d20: DEFAULT_ANIM, // d20 IS the benchmark — do not change it
   d30: DEFAULT_ANIM,
