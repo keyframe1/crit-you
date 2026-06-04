@@ -58,7 +58,11 @@ export default function PolyDie({ rollNonce, onResult, max, config, geometry }: 
   const groupRef = useRef<THREE.Group>(null);
   const flashRef = useRef<THREE.PointLight>(null);
   const numRef = useRef<HTMLDivElement>(null);
+  // `rollingRef` gates the idle Y-spin (paused while the dice tumbles). `lockRef`
+  // gates input: it stays held from the click through the full tumble, settle,
+  // and result display, so a rapid click can't interrupt or restart the roll.
   const rollingRef = useRef(false);
+  const lockRef = useRef(false);
 
   const onResultRef = useRef(onResult);
   useEffect(() => {
@@ -73,7 +77,18 @@ export default function PolyDie({ rollNonce, onResult, max, config, geometry }: 
 
   useEffect(() => {
     startIdle();
-    return () => killIdle();
+    // On unmount (e.g. switching dice) tear down every tween this die owns so
+    // nothing keeps animating a detached object. Capture the refs now; they're
+    // stable for this die's lifetime.
+    const num = numRef.current;
+    const grp = groupRef.current;
+    const flash = flashRef.current;
+    return () => {
+      killIdle();
+      gsap.killTweensOf(num);
+      if (grp) gsap.killTweensOf(grp.scale);
+      if (flash) gsap.killTweensOf(flash);
+    };
   }, [startIdle, killIdle]);
 
   // Roll whenever the nonce changes (but not on the initial mount value).
@@ -84,7 +99,8 @@ export default function PolyDie({ rollNonce, onResult, max, config, geometry }: 
       return;
     }
     const g = groupRef.current;
-    if (!g || rollingRef.current) return;
+    if (!g || lockRef.current) return;
+    lockRef.current = true;
     rollingRef.current = true;
     killIdle();
     gsap.killTweensOf(g.scale);
@@ -117,10 +133,22 @@ export default function PolyDie({ rollNonce, onResult, max, config, geometry }: 
       delay: p1Dur,
       ease: p2Ease,
       onComplete: () => {
-        // The die has landed: reveal the number on its face and tell the parent.
-        playNumberReveal(numRef.current, value, max, POLY_NUMBER_THEME);
-        onResultRef.current(value);
-        const finish = () => {
+        // The die has landed: reveal the number. The speech bubble waits until
+        // the number has faded in (onShown); the input lock releases only once
+        // the whole reveal (fade in → hold → fade out) has finished (onComplete).
+        playNumberReveal(
+          numRef.current,
+          value,
+          max,
+          POLY_NUMBER_THEME,
+          () => onResultRef.current(value),
+          () => {
+            lockRef.current = false;
+          }
+        );
+        // Resume the idle float/spin once the landing flourish is done — the die
+        // keeps floating while the number is displayed (only input stays locked).
+        const resume = () => {
           rollingRef.current = false;
           startIdle();
         };
@@ -137,14 +165,14 @@ export default function PolyDie({ rollNonce, onResult, max, config, geometry }: 
           const flash = flashRef.current;
           if (flash) {
             flash.intensity = 2;
-            gsap.to(flash, { intensity: 0, duration: 0.8, ease: "power2.out", onComplete: finish });
+            gsap.to(flash, { intensity: 0, duration: 0.8, ease: "power2.out", onComplete: resume });
           } else {
-            finish();
+            resume();
           }
         } else if (isMin) {
-          gsap.to(g.position, { y: -0.1, duration: 0.5, ease: "power2.out", onComplete: finish });
+          gsap.to(g.position, { y: -0.1, duration: 0.5, ease: "power2.out", onComplete: resume });
         } else {
-          finish();
+          resume();
         }
       },
     });
