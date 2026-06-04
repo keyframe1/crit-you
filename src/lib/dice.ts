@@ -341,13 +341,38 @@ const D10_ANIM: AnimConfig = {
   numberFail: "flicker",
 };
 
+// ═══ D12 — "The Underdog" ═══
+// The barbarian's die — rarely picked, desperate for the spotlight, deeply
+// theatrical. Every roll is the most important roll of its life. Its tumble is
+// big and slow, its nat-max glow burns at double intensity behind a held-pose
+// celebration, and its failure milks a dramatic pause before the number appears.
+const D12_ANIM: AnimConfig = {
+  float: { y: 4, rotateX: 2, duration: 2.5 },
+  tumble: {
+    p1Dur: 0.45, // a longer, grander wind-up than the 0.35 standard
+    p1Ease: "power2.in",
+    rotateZ: 50, // wide, dramatic spin
+    scale: 0.82,
+    p2Dur: 0.4,
+    p2Ease: "back.out(2.5)",
+  },
+  glowOpacity: 0.9, // double intensity — the spotlight it's always craved
+  // Full theatrical sequence: leap to 1.2, hold the pose, then release.
+  celebrate: [
+    { to: { scale: 1.2 }, duration: 0.2, ease: "power2.out" },
+    { to: { scale: 1 }, duration: 0.5, delay: 0.2, ease: "back.out(2)" },
+  ],
+  fail: [], // the tragedy plays out in the number's delayed, slow fade-in
+  numberFail: "delay-slow",
+};
+
 // Each die starts as the benchmark; its own commit dials in its character.
 export const ANIM: Record<DieType, AnimConfig> = {
   d4: D4_ANIM,
   d6: D6_ANIM,
   d8: D8_ANIM,
   d10: D10_ANIM,
-  d12: DEFAULT_ANIM,
+  d12: D12_ANIM,
   d20: DEFAULT_ANIM, // d20 IS the benchmark — do not change it
   d30: DEFAULT_ANIM,
 };

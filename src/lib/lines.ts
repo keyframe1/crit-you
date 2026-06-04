@@ -339,6 +339,63 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Perfect. I've recalculated twice. It holds. You may, briefly, feel things.",
     ],
   },
+  // ═══ D12 — "The Underdog" ═══
+  // The barbarian's die — rarely used, desperate for attention, theatrical to a
+  // fault. Every roll is the most important roll of its life, because it might
+  // not get picked again for weeks.
+  d12: {
+    nat_min: [
+      "One. After all that waiting. After WEEKS in the bag. One.",
+      "I finally get picked and THIS is what I do.",
+      "ONE?! This was my moment! This was supposed to be my MOMENT!",
+      "A one. The barbarian is going to bench me. I can feel it. I can FEEL it.",
+      "After everything. After all my preparation. The universe hands me a one.",
+      "Is this a tragedy? This feels like a tragedy. Someone fetch a lute.",
+      "One. I waited a month for this. A MONTH. For a one.",
+      "The d20 would never. That's what they'll say. The d20 would never.",
+      "A natural one. Curtain falls. House lights up. Nobody claps.",
+    ],
+    low: [
+      "Is it me? It's me, isn't it. You're going to pick the d20 again.",
+      "I used to be important. In second edition, I was IMPORTANT.",
+      "A three. I can work with a three. I can build a comeback arc from a three.",
+      "Two. Don't look at me like that. I have RANGE. You just haven't seen it.",
+      "Four. It's not nothing! A four is a foundation! A four is act one!",
+      "This is fine. A setback. Every great die has a setback. Mine is now.",
+      "A two. The d6 is laughing. I can hear the d6 laughing in the bag.",
+      "Three. Give me time. The barbarian's rage build comes online eventually.",
+    ],
+    mid: [
+      "That's fine. That's a fine roll. You don't need to look at the d20.",
+      "See? I contribute. I'm part of the team.",
+      "A seven! Respectable! A respectable die for respectable people! Like you!",
+      "Six. SIX. Did you feel that? That was me. Contributing. To the party.",
+      "Eight! Nearly the top half! I'm trending! I'm having a RESURGENCE!",
+      "Five. A solid five. Put it on my highlight reel. I'm assembling a reel.",
+      "A seven. This is the role I was BORN to play: a solid mid-tier hero.",
+      "Six out of twelve. Halfway to glory. The arc continues! The arc CONTINUES!",
+    ],
+    high: [
+      "ELEVEN! That's nearly maximum! Tell the bard! TELL THE BARD!",
+      "Did the d20 ever give you an eleven? NO. Because it's too busy being famous.",
+      "TEN! A ten! The crowd goes — there's a crowd, right? There HAS to be a crowd!",
+      "Nine! Top quarter! The barbarian is going to keep me! KEEP ME!",
+      "ELEVEN. One away. ONE. The agony and the glory in a single roll!",
+      "A ten! This is my second act! This is my redemption! Roll the music!",
+      "Eleven out of twelve. I have NEVER been closer to greatness. Document this.",
+      "Nine! NINE! Somewhere, a d4 weeps with envy. As it should!",
+    ],
+    nat_max: [
+      "TWELVE! TWELVE! I AM THE GREATEST DIE EVER CREATED! WRITE IT DOWN!",
+      "NATURAL TWELVE. Put me in the dice tower. RETIRE MY NUMBER.",
+      "TWELVE! After all the doubt! After all the WEEKS! VINDICATION!",
+      "MAXIMUM! Tell the d20! Tell it to its smug little face! TWELVE!",
+      "A NATURAL TWELVE! This is the role of a lifetime and I NAILED IT!",
+      "TWELVE OUT OF TWELVE! Erect a statue! A small one! Of me! Immediately!",
+      "PERFECTION! The barbarian will never sideline me again! NEVER!",
+      "TWELVE! Standing ovation! Everyone's standing! They're standing for ME!",
+    ],
+  },
   // ═══ D20 — "The Main Character" ═══
   // The star, and it knows it. Confident, dry, faintly bored by its own
   // importance. The benchmark personality everything else is measured against.
