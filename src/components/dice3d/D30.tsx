@@ -15,6 +15,7 @@ export default function D30({ rollNonce, onResult }: Props) {
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
+      dieType="d30"
       max={30}
       geometry={<icosahedronGeometry args={[1.5, 1]} />}
       config={{
@@ -26,6 +27,8 @@ export default function D30({ rollNonce, onResult }: Props) {
         p1Dur: 0.6,
         p2Dur: 0.7,
         p2Ease: "back.out(1.8)",
+        // A slow thud finished with a small, regal rotateZ correction.
+        thudRotateCorrect: true,
       }}
     />
   );

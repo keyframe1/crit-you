@@ -15,6 +15,7 @@ export default function D10({ rollNonce, onResult }: Props) {
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
+      dieType="d10"
       max={10}
       geometry={<dodecahedronGeometry args={[1.3, 0]} />}
       config={{
@@ -27,6 +28,8 @@ export default function D10({ rollNonce, onResult }: Props) {
         p2Dur: 0.45,
         p2Ease: "back.out(1.5)",
         meshScale: [1, 1.3, 1],
+        // Clinical, precise landing — barely a squash.
+        thudScale: 1.015,
       }}
     />
   );

@@ -5,12 +5,8 @@ import type * as THREE from "three";
 import { Sparkles } from "@react-three/drei";
 import gsap from "gsap";
 import { useIdleFloat } from "./useIdleFloat";
-import {
-  OnFaceNumber,
-  CELESTIAL_NUMBER_THEME,
-  playNumberReveal,
-  hideNumber,
-} from "./dieNumber";
+import { OnFaceNumber, playNumberReveal, hideNumber } from "./dieNumber";
+import { NUMBER_STYLES } from "@/lib/bubbleStyles";
 
 interface Props {
   rollNonce: number;
@@ -263,23 +259,45 @@ export default function DInf({ rollNonce, onResult }: Props) {
       duration: 1.6,
       ease: "power2.inOut",
       onComplete: () => {
-        // Reveal the number; the bubble waits for the fade-in (onShown), the
-        // input lock releases when the whole reveal finishes (onComplete).
-        playNumberReveal(
-          numRef.current,
-          value,
-          100,
-          CELESTIAL_NUMBER_THEME,
-          () => onResultRef.current(value),
-          () => {
-            lockRef.current = false;
-          }
-        );
+        // The celestial die doesn't "thud" — it RESOLVES. A gentle scale pulse
+        // (no impact), and only then does the number surface; the bubble waits
+        // for the fade-in (onShown), the input lock releases when the whole
+        // reveal finishes (onComplete).
+        const reveal = () => {
+          playNumberReveal(
+            numRef.current,
+            value,
+            100,
+            NUMBER_STYLES.dinf,
+            () => onResultRef.current(value),
+            () => {
+              lockRef.current = false;
+            }
+          );
+          resolveCosmos();
+        };
+        // Ethereal resolve pulse: scale 1 → 1.02 → 1 over 0.4s, then reveal.
+        if (g) {
+          gsap.to(g.scale, {
+            x: 1.02,
+            y: 1.02,
+            z: 1.02,
+            duration: 0.2,
+            yoyo: true,
+            repeat: 1,
+            ease: "sine.inOut",
+            onComplete: reveal,
+          });
+        } else {
+          reveal();
+        }
+
         const resume = () => {
           rollingRef.current = false;
           startIdle();
         };
 
+        function resolveCosmos() {
         if (isMax) {
           // Cosmic event: everything blazes, the atmosphere pulses outward.
           starRefs.current.forEach((m) => {
@@ -319,6 +337,7 @@ export default function DInf({ rollNonce, onResult }: Props) {
         } else {
           restoreAmbient();
           resume();
+        }
         }
       },
     });
@@ -428,7 +447,7 @@ export default function DInf({ rollNonce, onResult }: Props) {
       {/* Drifting particle ring around the orb. */}
       <Sparkles count={40} size={1.5} scale={[4, 4, 4]} speed={0.3} opacity={0.3} color="#94b8ff" />
 
-      <OnFaceNumber ref={numRef} theme={CELESTIAL_NUMBER_THEME} />
+      <OnFaceNumber ref={numRef} style={NUMBER_STYLES.dinf} />
     </group>
   );
 }

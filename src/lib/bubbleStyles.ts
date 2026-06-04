@@ -204,3 +204,112 @@ export const BUBBLE_STYLES: Record<DieType, BubbleStyle> = {
     notchRadius: "3px",
   },
 };
+
+// ─── On-face result number styling ───────────────────────────────────────────
+// The number that fades in on the die after it lands. It mirrors each die's
+// speech-bubble voice (same font family, weight, colour family) so the number
+// and the line read as one personality. Rendered by components/dice3d/dieNumber.
+// Crit overrides (maxColor/maxBackground/minColor/minBackground) are optional: a
+// die that omits them keeps its normal themed look on a nat max/min, leaning on
+// its body animation for the celebration. Only the d20 recolours its number.
+export interface NumberStyle {
+  fontFamily: string;
+  fontWeight: number;
+  fontStyle: CSSProperties["fontStyle"];
+  fontSize: string;
+  color: string;
+  textShadow: string;
+  background: string;
+  maxColor?: string;
+  maxBackground?: string;
+  minColor?: string;
+  minBackground?: string;
+}
+
+export const NUMBER_STYLES: Record<DieType, NumberStyle> = {
+  // D4 — bold crimson mono, like the caltrop's terse red briefing.
+  d4: {
+    fontFamily: MONO,
+    fontWeight: 700,
+    fontStyle: "normal",
+    fontSize: "36px",
+    color: "#e84c3d",
+    textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+    background: "rgba(26,10,10,0.5)",
+  },
+  // D6 — plain grey sans, normal weight. It's boring, on purpose.
+  d6: {
+    fontFamily: SANS,
+    fontWeight: 400,
+    fontStyle: "normal",
+    fontSize: "36px",
+    color: "#888888",
+    textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+    background: "rgba(245,245,240,0.4)",
+  },
+  // D8 — italic bold teal, matching the anxious-earnest bubble.
+  d8: {
+    fontFamily: SANS,
+    fontWeight: 700,
+    fontStyle: "italic",
+    fontSize: "36px",
+    color: "#2a9d8f",
+    textShadow: "0 1px 2px rgba(0,0,0,0.4)",
+    background: "rgba(240,250,250,0.4)",
+  },
+  // D10 — terminal-green mono with a faint glow. Data readout.
+  d10: {
+    fontFamily: MONO,
+    fontWeight: 400,
+    fontStyle: "normal",
+    fontSize: "36px",
+    color: "#27ae60",
+    textShadow: "0 0 6px rgba(39,174,96,0.4)",
+    background: "rgba(10,26,10,0.5)",
+  },
+  // D12 — bold gold, a touch larger than the rest. Theatrical.
+  d12: {
+    fontFamily: SANS,
+    fontWeight: 700,
+    fontStyle: "normal",
+    fontSize: "40px",
+    color: "#f0d878",
+    textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+    background: "rgba(26,21,8,0.5)",
+  },
+  // D20 — the benchmark: bold cream mono. Recolours on a crit (crimson nat 20,
+  // dim grey nat 1) — the only die that themes its number for max/min.
+  d20: {
+    fontFamily: MONO,
+    fontWeight: 700,
+    fontStyle: "normal",
+    fontSize: "36px",
+    color: "#e8e4dc",
+    textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+    background: "rgba(0,0,0,0.3)",
+    maxColor: "#ffffff",
+    maxBackground: "rgba(192,57,43,0.4)",
+    minColor: "#888888",
+    minBackground: "rgba(0,0,0,0.15)",
+  },
+  // D30 — light (300) lavender sans. Elegant, exotic.
+  d30: {
+    fontFamily: SANS,
+    fontWeight: 300,
+    fontStyle: "normal",
+    fontSize: "36px",
+    color: "#c89eec",
+    textShadow: "0 1px 2px rgba(0,0,0,0.4)",
+    background: "rgba(21,10,32,0.5)",
+  },
+  // D∞ — light ice-blue sans with a cosmic glow.
+  dinf: {
+    fontFamily: SANS,
+    fontWeight: 300,
+    fontStyle: "normal",
+    fontSize: "36px",
+    color: "#94b8ff",
+    textShadow: "0 0 12px rgba(148,184,255,0.5)",
+    background: "rgba(8,8,24,0.4)",
+  },
+};

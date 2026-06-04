@@ -14,6 +14,7 @@ export default function D12({ rollNonce, onResult }: Props) {
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
+      dieType="d12"
       max={12}
       geometry={<dodecahedronGeometry args={[1.5, 0]} />}
       config={{
@@ -25,6 +26,9 @@ export default function D12({ rollNonce, onResult }: Props) {
         p1Dur: 0.55,
         p2Dur: 0.65,
         p2Ease: "back.out(2.5)",
+        // The landing is an EVENT: a big squash and a slow, dramatic recovery.
+        thudScale: 1.06,
+        thudRecover: 0.35,
       }}
     />
   );

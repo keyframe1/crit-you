@@ -13,6 +13,7 @@ export default function D6({ rollNonce, onResult }: Props) {
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
+      dieType="d6"
       max={6}
       geometry={<boxGeometry args={[1.8, 1.8, 1.8]} />}
       config={{
@@ -24,6 +25,8 @@ export default function D6({ rollNonce, onResult }: Props) {
         p1Dur: 0.5,
         p2Dur: 0.5,
         p2Ease: "back.out(1.5)",
+        // Standard, reliable landing. Nothing fancy.
+        thudScale: 1.02,
       }}
     />
   );

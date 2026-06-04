@@ -13,6 +13,7 @@ export default function D4({ rollNonce, onResult }: Props) {
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
+      dieType="d4"
       max={4}
       geometry={<tetrahedronGeometry args={[1.5, 0]} />}
       config={{
@@ -24,6 +25,8 @@ export default function D4({ rollNonce, onResult }: Props) {
         p1Dur: 0.3,
         p2Dur: 0.35,
         p2Ease: "back.out(2.5)",
+        // Sharp, aggressive landing.
+        thudScale: 1.05,
       }}
     />
   );

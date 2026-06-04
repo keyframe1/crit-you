@@ -14,6 +14,7 @@ export default function D8({ rollNonce, onResult }: Props) {
     <PolyDie
       rollNonce={rollNonce}
       onResult={onResult}
+      dieType="d8"
       max={8}
       geometry={<octahedronGeometry args={[1.5, 0]} />}
       config={{
@@ -25,6 +26,9 @@ export default function D8({ rollNonce, onResult }: Props) {
         p1Dur: 0.45,
         p2Dur: 0.5,
         p2Ease: "back.out(3.0)",
+        // Eager: drops a touch harder, then bounces back up before settling.
+        thudDrop: 0.1,
+        thudBounce: true,
       }}
     />
   );
