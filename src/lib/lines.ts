@@ -227,6 +227,62 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Maximum value, minimum fuss. You're welcome, in a measured way.",
     ],
   },
+  // ═══ D8 — "The Middle Child" ═══
+  // Overlooked and insecure, eager to please, tries way too hard. Not as popular
+  // as the d6, not as dramatic as the d12, not the star like the d20.
+  d8: {
+    nat_min: [
+      "One. Sorry. I'm trying.",
+      "Please don't put me back in the bag.",
+      "One. I had one job and I — I know. I know. I'll do better.",
+      "Is this why nobody picks me? It's this, isn't it.",
+      "A one. Don't tell the d20. Please don't tell the d20.",
+      "I panicked. I always panic. I'm sorry — can we just try again?",
+      "One. I only wanted you to be proud of me.",
+      "That was bad. That was really bad. I felt it leave your hand wrong.",
+      "One. Was it me? It's always me.",
+    ],
+    low: [
+      "I know that's not great. Do you want to roll again? You can roll again.",
+      "I can do better. Give me another chance.",
+      "A three. Okay. Okay. Not my best. We can build on this. Can we?",
+      "Two. I saw your face. I'll remember that face. I'll fix it.",
+      "That's low, I know it's low, please don't switch to the d6.",
+      "I'm warming up! Dice warm up, right? Tell me dice warm up.",
+      "Three. Do you... did you need a three for anything? Maybe you needed a three.",
+      "Low again. I write these down, you know. I keep track of my failures.",
+    ],
+    mid: [
+      "Is that okay? I can't tell if that's okay.",
+      "Five. That's... that's fine, right? Right?",
+      "Four. Middle of the road. I'm middle of everything. It's kind of my thing.",
+      "A five. Did that help? Tell me that helped. Even a little.",
+      "Right in the middle! That's where I shine! ...is it? Is that where I shine?",
+      "Four. Not bad! Not bad, right? You're nodding. Why aren't you nodding?",
+      "Five. See, I CAN be average. I worked really hard to be average.",
+      "A solid mid roll. I practiced. I actually practiced for this.",
+    ],
+    high: [
+      "Seven! See? I'm useful! I told you I was useful!",
+      "That's almost my max. I'm almost impressive.",
+      "Six! SIX! Did the d6 ever give you a six AND have room to spare? No!",
+      "Seven out of eight. I'm SO close to mattering. So close.",
+      "A six! Write that down! No, actually write it down, I want a record.",
+      "Seven! Tell the d20 I said hi. Tell it I did a seven. Casually.",
+      "Look at me go! Six! I'm having a moment — let me have this!",
+      "Seven. That's basically a crit for me. Right? That's basically perfect, RIGHT?",
+    ],
+    nat_max: [
+      "EIGHT! Did you see that? Did everyone see that?",
+      "I DID IT. Screenshot this. Tell the other dice.",
+      "EIGHT! My maximum! The whole octahedron! I'm SOMEBODY!",
+      "Natural eight! Put me on the shelf! The GOOD shelf! Next to the d20!",
+      "EIGHT OUT OF EIGHT! Is this what the d20 feels like ALL the time?!",
+      "I peaked! This is my peak and I'm SO happy about it, don't ruin this!",
+      "EIGHT! Frame me! Frame me right now! I'll hold still!",
+      "Maximum! Did it count? It counted, right? Tell me it counted!",
+    ],
+  },
   // ═══ D20 — "The Main Character" ═══
   // The star, and it knows it. Confident, dry, faintly bored by its own
   // importance. The benchmark personality everything else is measured against.

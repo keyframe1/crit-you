@@ -286,11 +286,43 @@ const D6_ANIM: AnimConfig = {
   numberFail: "flat", // the number just appears: no spring, no fuss
 };
 
+// ═══ D8 — "The Middle Child" ═══
+// Overlooked and eager to please — not as popular as the d6, not as dramatic as
+// the d12, not the star like the d20. It overcompensates: its settle overshoots
+// harder than the benchmark, it double-bounces with joy when noticed, and it
+// visibly deflates on a failure.
+const D8_ANIM: AnimConfig = {
+  float: { y: 4, rotateX: 2, duration: 2.5 },
+  tumble: {
+    p1Dur: 0.35,
+    p1Ease: "power2.in",
+    rotateZ: 40,
+    scale: 0.82,
+    p2Dur: 0.4,
+    p2Ease: "back.out(3.5)", // overshoots more than 2.5 — overcompensating
+  },
+  glowOpacity: 0.7,
+  // Double bounce — excited that someone finally noticed.
+  celebrate: [
+    {
+      keyframes: { y: [0, -20, 0, -10, 0] },
+      duration: 0.6,
+      ease: "power2.out",
+    },
+  ],
+  // Shrinks slightly, then recovers. Deflating.
+  fail: [
+    { to: { scale: 0.95 }, duration: 0.3, ease: "power2.out" },
+    { to: { scale: 1 }, duration: 0.3, ease: "power2.out" },
+  ],
+  numberFail: "spring",
+};
+
 // Each die starts as the benchmark; its own commit dials in its character.
 export const ANIM: Record<DieType, AnimConfig> = {
   d4: D4_ANIM,
   d6: D6_ANIM,
-  d8: DEFAULT_ANIM,
+  d8: D8_ANIM,
   d10: DEFAULT_ANIM,
   d12: DEFAULT_ANIM,
   d20: DEFAULT_ANIM, // d20 IS the benchmark — do not change it
