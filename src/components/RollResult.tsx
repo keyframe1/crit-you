@@ -17,34 +17,34 @@ export default function RollResult({ roll }: { roll: Roll | null }) {
     const min = isNatMin(roll);
 
     el.textContent = String(roll.value);
+    // Natural min reads in the muted off-white; everything else in the accent.
     el.style.color = min ? "var(--light)" : "var(--accent)";
     el.style.filter = max
       ? "drop-shadow(0 0 24px rgba(192,57,43,.6))"
       : "none";
 
     gsap.killTweensOf(el);
-    gsap.set(el, { opacity: 0, scale: 0, x: 0, y: 0 });
-
-    // Spring entrance.
-    gsap.to(el, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(3)" });
+    // Springs down from a large scale (2.8 → 1) with a back.out(3) overshoot.
+    gsap.set(el, { opacity: 0, scale: 2.8, x: 0, y: 0 });
+    gsap.to(el, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(3)" });
 
     // Disappointed shake on a natural 1: 3 cycles, 4px amplitude.
     if (min) {
       gsap.to(el, {
         keyframes: { x: [0, -4, 4, -4, 4, -4, 4, 0] },
         duration: 0.4,
-        delay: 0.5,
+        delay: 0.45,
         ease: "power1.inOut",
       });
     }
 
-    // Fade out after holding for 2s.
+    // Hold ~700ms, then fade out.
     gsap.to(el, {
       opacity: 0,
       y: -12,
       scale: 0.7,
-      duration: 0.4,
-      delay: 2,
+      duration: 0.35,
+      delay: 1.1,
       ease: "power2.in",
     });
 

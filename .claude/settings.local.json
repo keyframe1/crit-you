@@ -18,7 +18,9 @@
       "Bash(echo \"DELETED stray C:\\\\\\\\Users\\\\\\\\antho\\\\\\\\package-lock.json\")",
       "Bash(echo \"no stray lockfile at C:\\\\\\\\Users\\\\\\\\antho\\\\\\\\package-lock.json\")",
       "Bash(git remote *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(vercel --version)",
+      "Bash(vercel whoami *)"
     ]
   }
 }

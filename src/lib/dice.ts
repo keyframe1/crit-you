@@ -45,75 +45,79 @@ export function isNatMin(roll: Roll): boolean {
 }
 
 // SVG wireframe geometry, authored in a 160×160 viewBox centred on (80,80).
-// `polygons` are closed outlines (drawn with the heavier stroke); `lines` are
-// the interior facet edges (drawn thin) that give each die its 3D read.
+// `polygons` are the closed silhouette outlines (drawn at stroke-width 2.2 so
+// the shape reads as solid); `lines` are the interior facet edges (drawn at
+// stroke-width 1.0 so they read as structure). This weight hierarchy — and the
+// shared viewBox — is identical across all seven dice; only the shape differs.
 export interface DieShape {
   polygons: string[];
   lines: [number, number, number, number][];
 }
 
 export const SHAPES: Record<DieType, DieShape> = {
-  // Tetrahedron: upright triangle with medians to the centroid.
+  // Tetrahedron: triangle with a median from each vertex to the opposite edge's
+  // midpoint.
   d4: {
     polygons: ["80,16 144,128 16,128"],
     lines: [
-      [80, 16, 80, 90.7],
-      [144, 128, 80, 90.7],
-      [16, 128, 80, 90.7],
+      [80, 16, 80, 128], // apex → midpoint of base
+      [144, 128, 48, 72], // bottom-right → midpoint of left edge
+      [16, 128, 112, 72], // bottom-left → midpoint of right edge
     ],
   },
-  // Cube: front face + offset back face + connecting edges.
+  // Cube: isometric projection — a hexagonal silhouette with three internal
+  // edges meeting at the centre (the classic corner-on cube).
   d6: {
-    polygons: ["44,60 108,60 108,124 44,124", "68,36 132,36 132,100 68,100"],
+    polygons: ["80,8 152,44 152,116 80,152 8,116 8,44"],
     lines: [
-      [44, 60, 68, 36],
-      [108, 60, 132, 36],
-      [108, 124, 132, 100],
-      [44, 124, 68, 100],
+      [80, 80, 80, 8], // centre → top
+      [80, 80, 8, 116], // centre → bottom-left
+      [80, 80, 152, 116], // centre → bottom-right
     ],
   },
-  // Octahedron: outer diamond, inner diamond, both diagonals.
+  // Octahedron: diamond with horizontal + vertical bisectors and an inner
+  // diamond (the equatorial square seen edge-on) for the diagonals.
   d8: {
-    polygons: ["80,12 140,80 80,148 20,80", "80,40 112,80 80,120 48,80"],
+    polygons: ["80,8 152,80 80,152 8,80"],
     lines: [
-      [20, 80, 140, 80],
-      [80, 12, 80, 148],
+      [8, 80, 152, 80], // horizontal bisector
+      [80, 8, 80, 152], // vertical bisector
+      [80, 44, 116, 80], // inner diamond
+      [116, 80, 80, 116],
+      [80, 116, 44, 80],
+      [44, 80, 80, 44],
     ],
   },
-  // Pentagonal trapezohedron: kite outline with a zig-zag girdle.
+  // Pentagonal trapezohedron: kite silhouette with a zig-zag girdle and apex
+  // spokes suggesting the ten faces.
   d10: {
     polygons: ["80,8 136,72 80,152 24,72"],
     lines: [
-      [24, 72, 52, 88],
+      [80, 8, 80, 152], // centre seam
+      [24, 72, 52, 88], // girdle zig-zag
       [52, 88, 80, 72],
       [80, 72, 108, 88],
       [108, 88, 136, 72],
-      [80, 8, 52, 88],
+      [80, 8, 52, 88], // top apex spokes
       [80, 8, 108, 88],
-      [80, 152, 52, 88],
+      [80, 152, 52, 88], // bottom apex spokes
       [80, 152, 108, 88],
     ],
   },
-  // Dodecahedron: outer pentagon, rotated inner pentagon, ten spokes.
+  // Dodecahedron: pentagon silhouette with an internal pentagram (each vertex
+  // joined to its two non-adjacent vertices).
   d12: {
-    polygons: [
-      "80,10 146.6,58.4 121.1,136.6 38.9,136.6 13.4,58.4",
-      "80,120 42,92.4 56.5,47.6 103.5,47.6 118,92.4",
-    ],
+    polygons: ["80,8 148.5,57.8 122.3,138.2 37.7,138.2 11.5,57.8"],
     lines: [
-      [80, 10, 56.5, 47.6],
-      [80, 10, 103.5, 47.6],
-      [146.6, 58.4, 103.5, 47.6],
-      [146.6, 58.4, 118, 92.4],
-      [121.1, 136.6, 118, 92.4],
-      [121.1, 136.6, 80, 120],
-      [38.9, 136.6, 80, 120],
-      [38.9, 136.6, 42, 92.4],
-      [13.4, 58.4, 42, 92.4],
-      [13.4, 58.4, 56.5, 47.6],
+      [80, 8, 122.3, 138.2],
+      [80, 8, 37.7, 138.2],
+      [148.5, 57.8, 37.7, 138.2],
+      [148.5, 57.8, 11.5, 57.8],
+      [122.3, 138.2, 11.5, 57.8],
     ],
   },
-  // Icosahedron: the original hexagonal wireframe, preserved.
+  // Icosahedron: the exact rerollgaming.com d20 — hexagonal silhouette with
+  // full internal triangulation. Do not change this shape.
   d20: {
     polygons: ["80,8 152,44 152,116 80,152 8,116 8,44"],
     lines: [
@@ -128,23 +132,30 @@ export const SHAPES: Record<DieType, DieShape> = {
       [8, 116, 152, 116],
     ],
   },
-  // Rhombic triacontahedron: decagon outline, rotated inner decagon, ten spokes.
+  // Rhombic triacontahedron: hexagonal silhouette with a denser facet pattern —
+  // radial spokes to every vertex plus an inner hexagon of edge midpoints —
+  // suggesting its many faces.
   d30: {
-    polygons: [
-      "80,8 122.3,21.8 148.5,57.8 148.5,102.2 122.3,138.2 80,152 37.7,138.2 11.5,102.2 11.5,57.8 37.7,21.8",
-      "91.1,45.8 109.1,58.8 116,80 109.1,101.2 91.1,114.2 68.9,114.2 50.9,101.2 44,80 50.9,58.8 68.9,45.8",
-    ],
+    polygons: ["80,8 152,44 152,116 80,152 8,116 8,44"],
     lines: [
-      [80, 8, 91.1, 45.8],
-      [122.3, 21.8, 109.1, 58.8],
-      [148.5, 57.8, 116, 80],
-      [148.5, 102.2, 109.1, 101.2],
-      [122.3, 138.2, 91.1, 114.2],
-      [80, 152, 68.9, 114.2],
-      [37.7, 138.2, 50.9, 101.2],
-      [11.5, 102.2, 44, 80],
-      [11.5, 57.8, 50.9, 58.8],
-      [37.7, 21.8, 68.9, 45.8],
+      [80, 80, 80, 8], // radial spokes to each outer vertex
+      [80, 80, 152, 44],
+      [80, 80, 152, 116],
+      [80, 80, 80, 152],
+      [80, 80, 8, 116],
+      [80, 80, 8, 44],
+      [116, 26, 152, 80], // inner hexagon of edge midpoints
+      [152, 80, 116, 134],
+      [116, 134, 44, 134],
+      [44, 134, 8, 80],
+      [8, 80, 44, 26],
+      [44, 26, 116, 26],
     ],
   },
 };
+
+// Shared stroke values so every die — full size and in the selector — uses the
+// same warm off-white and the same 2.2 : 1.0 weight ratio.
+export const DIE_STROKE = "#e8e4dc";
+export const OUTER_WEIGHT = 2.2;
+export const INNER_WEIGHT = 1.0;

@@ -2,7 +2,14 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import gsap from "gsap";
-import { SHAPES, maxFor, type DieType } from "@/lib/dice";
+import {
+  SHAPES,
+  maxFor,
+  DIE_STROKE,
+  OUTER_WEIGHT,
+  INNER_WEIGHT,
+  type DieType,
+} from "@/lib/dice";
 
 interface Props {
   dieType: DieType;
@@ -14,7 +21,9 @@ interface Props {
 export default function Dice({ dieType, onRoll }: Props) {
   const bodyRef = useRef<SVGSVGElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  // The shape currently drawn. Lags `dieType` so we can fade the old die out
+  // before swapping the SVG and fading the new one in.
+  const [shapeType, setShapeType] = useState<DieType>(dieType);
   const [rolling, setRolling] = useState(false);
   const [hinted, setHinted] = useState(true);
 
@@ -24,21 +33,63 @@ export default function Dice({ dieType, onRoll }: Props) {
     onRollRef.current = onRoll;
   }, [onRoll]);
 
-  // Idle float — runs whenever the die is at rest. Restarted after each roll.
-  useEffect(() => {
-    if (!bodyRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.to(bodyRef.current, {
-        y: 4,
-        rotateX: 2,
-        duration: 2.5,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-      });
+  // The shared idle float: sinusoidal Y (4px) + slight rotateX (2°), forever.
+  const startIdle = useCallback(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    gsap.to(body, {
+      y: 4,
+      rotateX: 2,
+      duration: 2.5,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
     });
-    return () => ctx.revert();
   }, []);
+
+  // Kick off the idle float on mount.
+  useEffect(() => {
+    startIdle();
+    const body = bodyRef.current;
+    return () => {
+      if (body) gsap.killTweensOf(body);
+    };
+  }, [startIdle]);
+
+  // Cross-fade when the selected die changes: fade/scale out, swap the SVG,
+  // then spring back in and restart the idle float.
+  const isFirst = useRef(true);
+  useEffect(() => {
+    if (isFirst.current) {
+      isFirst.current = false;
+      return;
+    }
+    const body = bodyRef.current;
+    if (!body) return;
+
+    gsap.killTweensOf(body);
+    setRolling(false);
+    gsap.to(body, {
+      opacity: 0,
+      scale: 0.9,
+      duration: 0.2,
+      ease: "power2.in",
+      onComplete: () => {
+        setShapeType(dieType);
+        gsap.fromTo(
+          body,
+          { opacity: 0, scale: 0.9 },
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.3,
+            ease: "back.out(1.5)",
+            onComplete: startIdle,
+          }
+        );
+      },
+    });
+  }, [dieType, startIdle]);
 
   const roll = useCallback(() => {
     if (rolling || !bodyRef.current) return;
@@ -50,10 +101,10 @@ export default function Dice({ dieType, onRoll }: Props) {
     const max = maxFor(dieType);
     const num = Math.floor(Math.random() * max) + 1;
 
-    // Kill idle float during roll.
+    // Kill the idle float for the duration of the roll.
     gsap.killTweensOf(body);
 
-    // 3D tumble.
+    // Phase 1 — 3D tumble in.
     gsap.to(body, {
       rotateX: 360,
       rotateY: 360,
@@ -62,7 +113,7 @@ export default function Dice({ dieType, onRoll }: Props) {
       duration: 0.35,
       ease: "power2.in",
       onComplete: () => {
-        // Settle with spring.
+        // Phase 2 — settle with a back.out overshoot.
         gsap.to(body, {
           rotateX: 0,
           rotateY: 0,
@@ -71,55 +122,46 @@ export default function Dice({ dieType, onRoll }: Props) {
           duration: 0.4,
           ease: "back.out(2.5)",
           onComplete: () => {
-            // Restart idle float.
-            gsap.to(body, {
-              y: 4,
-              rotateX: 2,
-              duration: 2.5,
-              ease: "sine.inOut",
-              yoyo: true,
-              repeat: -1,
-            });
+            startIdle();
             setRolling(false);
           },
         });
       },
     });
 
-    // Reveal the result as the die begins to settle (parent renders the number).
+    // Reveal the result mid-tumble (the parent renders the number).
     gsap.delayedCall(0.4, () => onRollRef.current(num));
 
     // Radial glow pulse behind the die on a natural max.
     if (num === max && glow) {
       gsap.fromTo(
         glow,
-        { opacity: 0.6, scale: 0.8 },
+        { opacity: 0.7, scale: 0.8 },
         { opacity: 0, scale: 1.3, duration: 0.8, ease: "power2.out" }
       );
     }
-  }, [rolling, dieType]);
+  }, [rolling, dieType, startIdle]);
 
-  const shape = SHAPES[dieType];
+  const shape = SHAPES[shapeType];
 
   return (
     <div className="flex flex-col items-center">
       <div
-        ref={containerRef}
         onClick={roll}
         className="relative cursor-pointer select-none group"
         style={{
           width: "clamp(220px, 56vmin, 440px)",
           height: "clamp(220px, 56vmin, 440px)",
-          perspective: "900px",
+          perspective: "600px",
         }}
       >
         <svg
           ref={bodyRef}
-          className="w-full h-full transition-[filter] duration-300 group-hover:drop-shadow-[0_8px_40px_rgba(192,57,43,.22)]"
+          className="w-full h-full transition-[filter] duration-[400ms] group-hover:drop-shadow-[0_4px_24px_rgba(192,57,43,0.15)]"
           viewBox="0 0 160 160"
           style={{ transformStyle: "preserve-3d" }}
         >
-          {/* Interior facet edges (thin). */}
+          {/* Interior facet edges (thin — structure). */}
           {shape.lines.map(([x1, y1, x2, y2], i) => (
             <line
               key={i}
@@ -127,18 +169,18 @@ export default function Dice({ dieType, onRoll }: Props) {
               y1={y1}
               x2={x2}
               y2={y2}
-              stroke="#3a3833"
-              strokeWidth="1"
+              stroke={DIE_STROKE}
+              strokeWidth={INNER_WEIGHT}
             />
           ))}
-          {/* Outlines (heavier). Drawn last so they sit on top. */}
+          {/* Silhouette outlines (heavy — solid). Drawn last, on top. */}
           {shape.polygons.map((points, i) => (
             <polygon
               key={i}
               points={points}
               fill="none"
-              stroke="#8a8780"
-              strokeWidth="2.2"
+              stroke={DIE_STROKE}
+              strokeWidth={OUTER_WEIGHT}
               strokeLinejoin="round"
             />
           ))}
@@ -148,7 +190,7 @@ export default function Dice({ dieType, onRoll }: Props) {
           className="absolute -inset-8 rounded-full pointer-events-none"
           style={{
             background:
-              "radial-gradient(circle, rgba(192,57,43,.45), transparent 70%)",
+              "radial-gradient(circle, rgba(192,57,43,.4), transparent 70%)",
             opacity: 0,
           }}
         />
