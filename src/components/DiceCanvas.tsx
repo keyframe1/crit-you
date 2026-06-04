@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { type DieType } from "@/lib/dice";
+import { DailyControlContext, type DailyControl } from "./dice3d/dailyControl";
 import D4 from "./dice3d/D4";
 import D6 from "./dice3d/D6";
 import D8 from "./dice3d/D8";
@@ -20,6 +21,18 @@ interface Props {
   // Fired when a fresh roll's tumble begins, so the parent can clear the stale
   // result number before the new value lands.
   onRollStart?: () => void;
+  // ─── Controlled mode (Daily Crit) — all optional; the main app uses none ───
+  // When provided, the parent owns the roll trigger: bump this nonce to roll.
+  // (The internal click-to-roll is then disabled.)
+  rollNonce?: number;
+  // Whether clicking the stage rolls the die. Default true; the daily passes
+  // false and drives rolls from its own ROLL button instead.
+  interactive?: boolean;
+  // Forced-value + bank-celebrate channel handed down to the die (see PolyDie).
+  control?: DailyControl;
+  // CSS size override for the square stage (the daily uses a smaller die in its
+  // modal). Defaults to the full-page clamp.
+  size?: string;
 }
 
 // Pick the 3D component for the selected die. Dice render only their 3D mesh and
@@ -60,25 +73,41 @@ function Die3D({
 
 // The shared Three.js stage: one Canvas, lighting, and a shadow-catching floor,
 // hosting whichever die is selected.
-export default function DiceCanvas({ dieType, onRoll, onRollStart }: Props) {
+export default function DiceCanvas({
+  dieType,
+  onRoll,
+  onRollStart,
+  rollNonce: controlledNonce,
+  interactive = true,
+  control,
+  size = "clamp(280px, min(82vmin, 62vh), 560px)",
+}: Props) {
   // Clicking anywhere in the stage bumps this; the die component watches it and
-  // rolls (guarding against re-rolls mid-animation itself).
-  const [rollNonce, setRollNonce] = useState(0);
+  // rolls (guarding against re-rolls mid-animation itself). In controlled mode
+  // (the daily) the parent owns the nonce and this internal one is ignored.
+  const [internalNonce, setInternalNonce] = useState(0);
+  const controlled = controlledNonce !== undefined;
+  const rollNonce = controlled ? controlledNonce : internalNonce;
 
   const handleClick = useCallback(() => {
-    setRollNonce((n) => n + 1);
-  }, []);
+    if (controlled || !interactive) return;
+    setInternalNonce((n) => n + 1);
+  }, [controlled, interactive]);
 
   return (
     <div
       onClick={handleClick}
-      className="relative cursor-pointer select-none"
+      className={
+        interactive && !controlled
+          ? "relative cursor-pointer select-none"
+          : "relative select-none"
+      }
       style={{
         // A big square stage so the die genuinely dominates the page. Bounded by
         // height in landscape (62vh) and by width on tall/mobile screens (82vmin)
         // so it never crowds out the bubble above or the selector below.
-        width: "clamp(280px, min(82vmin, 62vh), 560px)",
-        height: "clamp(280px, min(82vmin, 62vh), 560px)",
+        width: size,
+        height: size,
       }}
     >
       <Canvas
@@ -113,14 +142,18 @@ export default function DiceCanvas({ dieType, onRoll, onRollStart }: Props) {
           <shadowMaterial transparent opacity={0.12} />
         </mesh>
 
-        {/* Remounts on die change so each die's animation state starts fresh. */}
-        <Die3D
-          key={dieType}
-          dieType={dieType}
-          rollNonce={rollNonce}
-          onResult={onRoll}
-          onRollStart={onRollStart}
-        />
+        {/* Remounts on die change so each die's animation state starts fresh.
+            The control provider lives INSIDE the Canvas so PolyDie reads it
+            within the same react-three-fiber reconciler (no context bridge). */}
+        <DailyControlContext.Provider value={control ?? null}>
+          <Die3D
+            key={dieType}
+            dieType={dieType}
+            rollNonce={rollNonce}
+            onResult={onRoll}
+            onRollStart={onRollStart}
+          />
+        </DailyControlContext.Provider>
       </Canvas>
     </div>
   );

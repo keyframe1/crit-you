@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 import type * as THREE from "three";
 import { Edges } from "@react-three/drei";
 import gsap from "gsap";
 import { useIdleFloat } from "./useIdleFloat";
 import type { DieReaction } from "./reactions";
+import { DailyControlContext } from "./dailyControl";
 
 export interface PolyDieConfig {
   color: string; // signature colour: faces, edge flash, point light
@@ -96,6 +97,14 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
     onRollStartRef.current = onRollStart;
   }, [onRollStart]);
 
+  // Optional Daily-Crit control channel: forces the rolled value and exposes a
+  // bank-celebrate signal. Null (and thus inert) everywhere except the daily.
+  const control = useContext(DailyControlContext);
+  const controlRef = useRef(control);
+  useEffect(() => {
+    controlRef.current = control;
+  });
+
   const { startIdle, killIdle } = useIdleFloat(
     groupRef,
     rollingRef,
@@ -145,7 +154,10 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
     // doesn't hang over the tumbling die.
     onRollStartRef.current?.();
 
-    const value = Math.floor(Math.random() * max) + 1;
+    // The daily forces a deterministic value; everywhere else the die rolls its
+    // own random face.
+    const forced = controlRef.current?.getRollValue?.();
+    const value = forced != null ? forced : Math.floor(Math.random() * max) + 1;
     const isMax = value >= max;
     const isMin = value <= 1;
 
@@ -247,6 +259,34 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
     fail,
     color,
   ]);
+
+  // BANK celebration (Daily Crit): when the control's celebrateSignal ticks up,
+  // play this die's nat-max reaction in place — no tumble. Guarded so it never
+  // fires on mount or while a roll/another reaction is already in flight.
+  const celebrateSignal = control?.celebrateSignal ?? 0;
+  const firstCelebrate = useRef(true);
+  useEffect(() => {
+    if (firstCelebrate.current) {
+      firstCelebrate.current = false;
+      return;
+    }
+    const g = groupRef.current;
+    if (celebrateSignal <= 0 || !celebrate || !g || lockRef.current) return;
+    lockRef.current = true;
+    rollingRef.current = true;
+    killIdle();
+    celebrate({
+      group: g,
+      material: matRef.current,
+      flash: flashRef.current,
+      baseColor: color,
+      done: () => {
+        rollingRef.current = false;
+        startIdle();
+        lockRef.current = false;
+      },
+    });
+  }, [celebrateSignal, celebrate, color, killIdle, startIdle]);
 
   const handlePointerOver = useCallback(() => {
     if (rollingRef.current) return;

@@ -6,6 +6,7 @@ import Personality from "@/components/Personality";
 import DiceSelector from "@/components/DiceSelector";
 import ShareCard from "@/components/ShareCard";
 import ResultNumber from "@/components/ResultNumber";
+import DailyButton from "@/components/DailyButton";
 import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
 import { pickLine } from "@/lib/lines";
 
@@ -98,7 +99,10 @@ export default function Home() {
             Crit
           </span>
         </button>
-        <ShareCard roll={roll} />
+        <div className="flex items-center gap-2">
+          <DailyButton />
+          <ShareCard roll={roll} />
+        </div>
       </header>
 
       {/* Die area. `relative` so the speech bubble can float ABSOLUTELY above the
