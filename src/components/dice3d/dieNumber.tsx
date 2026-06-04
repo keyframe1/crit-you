@@ -8,19 +8,19 @@ import gsap from "gsap";
 export interface NumberTheme {
   normal: string; // text colour for an ordinary roll
   bg: string; // panel background for an ordinary roll
-  shadow: string; // text-shadow (kept across all results)
+  shadow: string; // text-shadow (stays constant across results)
 }
 
 export const POLY_NUMBER_THEME: NumberTheme = {
   normal: "#e8e4dc",
-  bg: "rgba(0,0,0,0.25)",
-  shadow: "0 1px 3px rgba(0,0,0,0.4)",
+  bg: "rgba(0,0,0,0.3)",
+  shadow: "0 2px 4px rgba(0,0,0,0.5)",
 };
 
 export const CELESTIAL_NUMBER_THEME: NumberTheme = {
   normal: "#94b8ff",
-  bg: "rgba(148,184,255,0.15)",
-  shadow: "0 0 8px rgba(148,184,255,0.5)",
+  bg: "rgba(148,184,255,0.1)",
+  shadow: "0 0 12px rgba(148,184,255,0.6)",
 };
 
 // Crit feedback layered on top of any theme: a natural max glows gold, a natural
@@ -28,43 +28,39 @@ export const CELESTIAL_NUMBER_THEME: NumberTheme = {
 const MAX = { color: "#ffffff", bg: "rgba(255,215,0,0.3)" };
 const MIN = { color: "#888888", bg: "rgba(0,0,0,0.15)" };
 
-const baseStyle: CSSProperties = {
-  fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-  fontWeight: 900,
-  fontSize: "36px",
-  lineHeight: 1,
-  padding: "8px 16px",
-  borderRadius: "8px",
-  whiteSpace: "nowrap",
-  // Centre the panel on its 3D anchor (drei's `center` is a no-op in transform
-  // mode, so we do it here).
-  transform: "translate(-50%, -50%)",
-  opacity: 0,
-  userSelect: "none",
-  WebkitUserSelect: "none",
-};
+// Only STATIC styling lives in the JSX `style` (font, padding, shadow). The
+// dynamic bits — text, colour, background, opacity — are set imperatively on the
+// forwarded ref so drei's per-render re-paint of the panel can't clobber them.
+function staticStyle(theme: NumberTheme): CSSProperties {
+  return {
+    fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+    fontWeight: 900,
+    fontSize: "36px",
+    lineHeight: 1,
+    padding: "6px 14px",
+    borderRadius: "8px",
+    whiteSpace: "nowrap",
+    textShadow: theme.shadow,
+    pointerEvents: "none",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+  };
+}
 
-// The result number, drawn as a drei <Html transform> panel parked just in front
-// of the die centre. `transform` makes it inherit the die group's full world
-// matrix, so it reads as printed on the front face and turns with the die as it
-// slowly spins. Forwards a ref to the panel div so the die can fade it in/out.
-// We intentionally skip `occlude` — at this z the panel would otherwise be
-// hidden behind the die's own front face, and during its brief on-screen life
-// the die barely rotates, so it never needs hiding.
-export const OnFaceNumber = forwardRef<HTMLDivElement, { theme: NumberTheme; z?: number }>(
-  function OnFaceNumber({ theme, z = 0.9 }, ref) {
+// The result number: a drei <Html> panel anchored dead-centre on the die group
+// ([0,0,0]) and billboarded (no `transform`), so it always faces the camera and
+// stays centred no matter how the die rotates. Forwards a ref to the panel div.
+export const OnFaceNumber = forwardRef<HTMLDivElement, { theme: NumberTheme }>(
+  function OnFaceNumber({ theme }, ref) {
     return (
-      <Html transform position={[0, 0, z]} pointerEvents="none">
-        <div
-          ref={ref}
-          style={{
-            ...baseStyle,
-            color: theme.normal,
-            background: theme.bg,
-            textShadow: theme.shadow,
-          }}
-        />
-      </Html>
+      <Html
+        ref={ref}
+        center
+        position={[0, 0, 0]}
+        zIndexRange={[10, 0]}
+        pointerEvents="none"
+        style={staticStyle(theme)}
+      />
     );
   }
 );
