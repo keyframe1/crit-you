@@ -57,8 +57,9 @@ const STAR_PALETTE = ["#ffffff", "#c8d8ff", "#fff8e0"];
 
 // THE HIDDEN d20 — six bright stars at the vertices of the reroll d20's hexagon
 // projection (scaled to ~0.8 inside the orb), wired into the icosahedron's
-// outline + triangulation. An easter egg: a d20 traced in the stars, there if
-// you look for it but never obvious.
+// outline + triangulation. With the random constellation web removed, this is
+// the ONLY structure inside the sphere, so it reads clearly: a d20 traced in the
+// stars, an easter egg there if you look for it.
 const D20_VERTS: [number, number, number][] = [
   [0, 0.8, 0], // 0 top
   [0.7, 0.35, 0], // 1 upper-right
@@ -78,13 +79,25 @@ const D20_LINE_POSITIONS = new Float32Array(
   D20_EDGES.flatMap(([a, b]) => [...D20_VERTS[a], ...D20_VERTS[b]])
 );
 
-// Barely-there coloured fog inside the orb — interior depth you feel more than
-// see. If a blob is clearly visible, the opacity is too high.
+// Barely-there coloured fog inside the orb — interior depth that shows as subtle
+// colour shifts as the orb turns.
 const NEBULA_FOG = [
-  { pos: [0.4, 0.3, -0.2], radius: 0.45, color: "#1a2a6b", opacity: 0.05 }, // deep blue
-  { pos: [-0.5, -0.2, 0.3], radius: 0.4, color: "#3a1a5a", opacity: 0.045 }, // violet
-  { pos: [0.1, -0.45, -0.3], radius: 0.35, color: "#1a4a5a", opacity: 0.04 }, // teal
+  { pos: [0.4, 0.3, -0.2], radius: 0.45, color: "#1a2a6b", opacity: 0.1 }, // deep blue
+  { pos: [-0.5, -0.2, 0.3], radius: 0.4, color: "#3a1a5a", opacity: 0.085 }, // violet
+  { pos: [0.1, -0.45, -0.3], radius: 0.35, color: "#1a4a5a", opacity: 0.07 }, // teal
 ] as const;
+
+// The comet's tail — eight spheres, each smaller and fainter than the last,
+// fading in colour from icy white-blue to the deep-space blue.
+const TRAIL_SIZES = [0.035, 0.03, 0.025, 0.02, 0.018, 0.015, 0.012, 0.01];
+const TRAIL_OPACITIES = [0.7, 0.5, 0.35, 0.25, 0.18, 0.12, 0.08, 0.04];
+const TRAIL_COLOR_A = new THREE.Color("#b0c8ff");
+const TRAIL_COLOR_B = new THREE.Color("#94b8ff");
+const TRAIL_COLORS = TRAIL_SIZES.map((_, i) =>
+  new THREE.Color().lerpColors(TRAIL_COLOR_A, TRAIL_COLOR_B, i / (TRAIL_SIZES.length - 1)).getStyle()
+);
+const COMET_RADIUS = 1.65; // matches the orbital ring
+const COMET_BASE_SPEED = 0.8; // ~one orbit every 8s
 
 // A tiny deterministic PRNG (mulberry32) so the cosmos is generated purely
 // during render — same field every mount, no impure Math.random.
@@ -99,22 +112,28 @@ function mulberry32(seed: number) {
 }
 
 // THE CELESTIAL (d100) — a polished obsidian orb that is a window into deep
-// space. The orb surface is OPAQUE (so the floor shadow can't bleed through it)
-// and breathes a faint nebula emissive. Over it: ~100 twinkling stars in three
-// tiers, a layer of tiny static "distant" stars for volume, a hidden d20
-// constellation, cross-flare sparkles on the brightest stars, faint coloured
-// nebula fog, nebula lights tinting the gloss, a slow Saturn-like orbital ring,
-// an ice halo, and drifting sparkles. All depth-test-off layers read through the
-// solid orb. It turns with a majestic spin rather than a tumble.
+// space, wrapped in a dark, breathing purple aura that gives it weight. Over the
+// orb: ~100 twinkling stars + a static "distant" depth field, the hidden d20
+// constellation (the only constellation now), cross-flare sparkles, faint nebula
+// fog, nebula lights, and a tilted Saturn-like ring with a comet + trail circling
+// it. All depth-test-off layers read through the solid orb. It RESOLVES with a
+// majestic spin rather than a tumble.
 export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const orbMatRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const starRefs = useRef<(THREE.Mesh | null)[]>([]);
   const sparkleMatRefs = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
   const nebRefs = useRef<(THREE.PointLight | null)[]>([]);
-  const lineMatRef = useRef<THREE.LineBasicMaterial>(null);
-  const atmosMatRef = useRef<THREE.MeshBasicMaterial>(null);
-  const ringRef = useRef<THREE.Mesh>(null); // slow independent orbital ring
+  const lineMatRef = useRef<THREE.LineBasicMaterial>(null); // the d20 constellation
+  const atmosMatRef = useRef<THREE.MeshBasicMaterial>(null); // ice halo (hover)
+  const auraMatRef = useRef<THREE.MeshBasicMaterial>(null); // dark breathing aura
+  const ringSysRef = useRef<THREE.Group>(null); // ring + comet + trail, counter-spins
+  const ringMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const cometRef = useRef<THREE.Mesh>(null);
+  const trailRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const trailMatRefs = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
+  const cometAngle = useRef(0);
+  const cometSpeed = useRef(COMET_BASE_SPEED);
   const haloRef = useRef<THREE.Mesh>(null); // nat-100 celebration halo ring
   const haloMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const rollingRef = useRef(false); // gates the idle spin
@@ -139,10 +158,9 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
   );
 
   // The cosmos, generated once and seeded so it's pure during render: the random
-  // tiers, the random constellation web (linked before the d20 stars join so the
-  // easter egg stays a clean shape), the hidden d20 stars, the static distant
-  // depth field, and which bright stars wear cross-flares.
-  const { stars, linePositions, distantStars, sparkleStars } = useMemo(() => {
+  // tiers, the hidden d20 stars, the static distant depth field, and which bright
+  // stars wear cross-flares.
+  const { stars, distantStars, sparkleStars } = useMemo(() => {
     const rand = mulberry32(0x5eed);
     const s: Star[] = [];
     for (const tier of STAR_TIERS) {
@@ -166,25 +184,8 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
         });
       }
     }
-    // Constellations link only the RANDOM bright stars — each to its two nearest
-    // bright neighbours, deduped.
-    const bright = s.map((st, i) => ({ st, i })).filter((e) => e.st.bright);
-    const pts: number[] = [];
-    const used = new Set<string>();
-    for (const { st, i } of bright) {
-      const near = bright
-        .filter((e) => e.i !== i)
-        .sort((a, b) => dist2(st, a.st) - dist2(st, b.st))
-        .slice(0, 2);
-      for (const { st: other, i: j } of near) {
-        const key = i < j ? `${i}-${j}` : `${j}-${i}`;
-        if (used.has(key)) continue;
-        used.add(key);
-        pts.push(st.x, st.y, st.z, other.x, other.y, other.z);
-      }
-    }
-    // Cross-flares ride the random bright tier only (the d20 stars get their
-    // identity from the constellation lines). Captured before the d20 stars join.
+    // Cross-flares ride the random bright tier only. Captured before the d20
+    // stars join.
     const spk = s.filter((st) => st.bright && !st.d20);
     // The hidden d20: six prominent, brightest stars at the wireframe vertices.
     for (const [x, y, z] of D20_VERTS) {
@@ -218,14 +219,15 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
         color: STAR_PALETTE[Math.floor(rand() * STAR_PALETTE.length)],
       });
     }
-    return { stars: s, linePositions: new Float32Array(pts), distantStars: distant, sparkleStars: spk };
+    return { stars: s, distantStars: distant, sparkleStars: spk };
   }, []);
 
-  // ── Ambient loops: twinkle / nebula breathing / line pulse / emissive glow ──
+  // ── Ambient loops: twinkle / nebula / line pulse / emissive / aura breathing ─
   const twinkleTweens = useRef<gsap.core.Tween[]>([]);
   const nebulaTweens = useRef<gsap.core.Tween[]>([]);
   const lineTween = useRef<gsap.core.Tween | null>(null);
   const emissiveTween = useRef<gsap.core.Tween | null>(null);
+  const auraTween = useRef<gsap.core.Tween | null>(null);
 
   const startTwinkle = useCallback(() => {
     twinkleTweens.current.forEach((t) => t.kill());
@@ -281,13 +283,14 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     });
   }, []);
 
+  // The d20 constellation breathes gently around a clearly-readable level.
   const startLinePulse = useCallback(() => {
     lineTween.current?.kill();
     if (!lineMatRef.current) return;
     lineTween.current = gsap.fromTo(
       lineMatRef.current,
-      { opacity: 0.15 },
-      { opacity: 0.4, duration: 4, yoyo: true, repeat: -1, ease: "sine.inOut" }
+      { opacity: 0.3 },
+      { opacity: 0.45, duration: 4, yoyo: true, repeat: -1, ease: "sine.inOut" }
     );
   }, []);
 
@@ -301,6 +304,17 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     );
   }, []);
 
+  // The dark aura breathes slowly, an ominous living presence.
+  const startAura = useCallback(() => {
+    auraTween.current?.kill();
+    if (!auraMatRef.current) return;
+    auraTween.current = gsap.fromTo(
+      auraMatRef.current,
+      { opacity: 0.18 },
+      { opacity: 0.3, duration: 6, yoyo: true, repeat: -1, ease: "sine.inOut" }
+    );
+  }, []);
+
   const killAmbient = useCallback(() => {
     twinkleTweens.current.forEach((t) => t.kill());
     twinkleTweens.current = [];
@@ -310,6 +324,8 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     lineTween.current = null;
     emissiveTween.current?.kill();
     emissiveTween.current = null;
+    auraTween.current?.kill();
+    auraTween.current = null;
   }, []);
 
   const restoreAmbient = useCallback(() => {
@@ -317,7 +333,8 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     startNebula();
     startLinePulse();
     startEmissive();
-  }, [startTwinkle, startNebula, startLinePulse, startEmissive]);
+    startAura();
+  }, [startTwinkle, startNebula, startLinePulse, startEmissive, startAura]);
 
   useEffect(() => {
     startIdle();
@@ -325,6 +342,7 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     // Capture refs now (stable for this die's lifetime) for unmount teardown.
     const grp = groupRef.current;
     const atmos = atmosMatRef.current;
+    const aura = auraMatRef.current;
     const halo = haloRef.current;
     const haloMat = haloMatRef.current;
     return () => {
@@ -332,15 +350,34 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
       killAmbient();
       if (grp) gsap.killTweensOf(grp.scale);
       if (atmos) gsap.killTweensOf(atmos);
+      if (aura) gsap.killTweensOf(aura);
       if (halo) gsap.killTweensOf(halo.scale);
       if (haloMat) gsap.killTweensOf(haloMat);
     };
   }, [startIdle, killIdle, restoreAmbient, killAmbient]);
 
-  // The orbital ring turns on its own slow clock (opposite the orb's idle spin),
-  // so the celestial die always has a little independent motion.
+  // Per-frame motion that runs regardless of state: the ring system slowly
+  // counter-rotates in its tilted plane, the comet orbits the ring path at its
+  // current speed, and the trail follows the comet (follow-the-leader).
   useFrame((_, delta) => {
-    if (ringRef.current) ringRef.current.rotation.z -= delta * 0.03;
+    if (ringSysRef.current) ringSysRef.current.rotation.z -= delta * 0.03;
+    const comet = cometRef.current;
+    if (comet) {
+      cometAngle.current += delta * cometSpeed.current;
+      comet.position.set(
+        Math.cos(cometAngle.current) * COMET_RADIUS,
+        0,
+        Math.sin(cometAngle.current) * COMET_RADIUS
+      );
+      // Each trail sphere takes the previous-frame position of the one ahead.
+      for (let i = trailRefs.current.length - 1; i > 0; i--) {
+        const cur = trailRefs.current[i];
+        const ahead = trailRefs.current[i - 1];
+        if (cur && ahead) cur.position.copy(ahead.position);
+      }
+      const first = trailRefs.current[0];
+      if (first) first.position.copy(comet.position);
+    }
   });
 
   // ── Roll: a majestic 3-turn spin, with the cosmos flaring during it ────────
@@ -368,8 +405,8 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     const isMax = value >= 100;
     const isMin = value <= 1;
 
-    // Flash every star bright, double the nebula lights, and brighten the orb's
-    // own glow during the spin.
+    // Flash every star bright, double the nebula lights, brighten the orb's own
+    // glow and the d20 constellation during the spin.
     starRefs.current.forEach((m) => {
       if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 1, duration: 0.3 });
     });
@@ -417,13 +454,13 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
 
         function resolveCosmos() {
         if (isMax) {
-          // COSMIC EVENT: every star blazes, constellations flare, the nebula
-          // lights triple, the orb glows, the atmosphere pulses outward, and a
-          // halo ring blooms and fades.
+          // COSMIC EVENT: every star blazes, the d20 constellation flares, the
+          // nebula lights triple, the orb glows, the atmosphere pulses, the aura
+          // swells, the ring + comet flare and the comet sprints, a halo blooms.
           starRefs.current.forEach((m) => {
             if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 1, duration: 0.2 });
           });
-          if (lineMatRef.current) gsap.to(lineMatRef.current, { opacity: 0.8, duration: 0.2 });
+          if (lineMatRef.current) gsap.to(lineMatRef.current, { opacity: 0.9, duration: 0.2 });
           nebRefs.current.forEach((l, i) => {
             if (l) gsap.to(l, { intensity: NEBULA[i].max * 3, duration: 0.2 });
           });
@@ -435,8 +472,33 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
               { opacity: 0.15, duration: 0.5, yoyo: true, repeat: 1, ease: "power2.inOut" }
             );
           }
-          // Halo ring: blooms from the orb's edge outward (radius ~1.6 → ~2.5)
-          // while fading, over 0.8s.
+          // The aura pulses outward (0.25 → 0.5 → back over 0.8s).
+          if (auraMatRef.current) {
+            gsap.fromTo(
+              auraMatRef.current,
+              { opacity: 0.25 },
+              { opacity: 0.5, duration: 0.4, yoyo: true, repeat: 1, ease: "power2.inOut" }
+            );
+          }
+          // The ring briefly brightens (0.35 → 0.7 → back over 0.5s).
+          if (ringMatRef.current) {
+            gsap.fromTo(
+              ringMatRef.current,
+              { opacity: 0.35 },
+              { opacity: 0.7, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.inOut" }
+            );
+          }
+          // The comet sprints (triple speed for 1s), its trail flashing full.
+          cometSpeed.current = COMET_BASE_SPEED * 3;
+          gsap.delayedCall(1.0, () => {
+            cometSpeed.current = COMET_BASE_SPEED;
+          });
+          trailMatRefs.current.forEach((m, i) => {
+            if (!m) return;
+            gsap.to(m, { opacity: 1.0, duration: 0.2 });
+            gsap.to(m, { opacity: TRAIL_OPACITIES[i], duration: 0.8, delay: 0.6 });
+          });
+          // Halo ring: blooms from the orb's edge outward while fading, over 0.8s.
           const halo = haloRef.current;
           const haloMat = haloMatRef.current;
           if (halo && haloMat) {
@@ -452,9 +514,10 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
             resume();
           });
         } else if (isMin) {
-          // COSMIC DARKNESS: stars gutter to near-black, constellations vanish,
-          // the nebula lights die and the orb goes dark. Hold the void, then let
-          // the stars twinkle back one by one (staggered) before ambient resumes.
+          // COSMIC DARKNESS: stars gutter to near-black, the d20 constellation
+          // fades out too, the nebula lights die, the orb goes dark, the aura
+          // thins, the comet crawls and its trail vanishes. Hold the void, then
+          // let everything recover.
           starRefs.current.forEach((m) => {
             if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 0.03, duration: 0.5 });
           });
@@ -463,6 +526,11 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
             if (l) gsap.to(l, { intensity: 0, duration: 0.5 });
           });
           if (orbMatRef.current) gsap.to(orbMatRef.current, { emissiveIntensity: 0.02, duration: 0.5 });
+          if (auraMatRef.current) gsap.to(auraMatRef.current, { opacity: 0.08, duration: 0.5 });
+          cometSpeed.current = COMET_BASE_SPEED * 0.1;
+          trailMatRefs.current.forEach((m) => {
+            if (m) gsap.to(m, { opacity: 0, duration: 0.5 });
+          });
           gsap.delayedCall(1.5, () => {
             // Staggered revival: each star fades back on its own slight delay.
             starRefs.current.forEach((m, i) => {
@@ -474,11 +542,16 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
                   ease: "sine.out",
                 });
             });
-            if (lineMatRef.current) gsap.to(lineMatRef.current, { opacity: 0.3, duration: 1.0 });
+            if (lineMatRef.current) gsap.to(lineMatRef.current, { opacity: 0.35, duration: 1.0 });
             nebRefs.current.forEach((l, i) => {
               if (l) gsap.to(l, { intensity: NEBULA[i].max * 0.5, duration: 1.0 });
             });
             if (orbMatRef.current) gsap.to(orbMatRef.current, { emissiveIntensity: 0.5, duration: 1.0 });
+            // The comet accelerates back; its trail fades back in.
+            cometSpeed.current = COMET_BASE_SPEED;
+            trailMatRefs.current.forEach((m, i) => {
+              if (m) gsap.to(m, { opacity: TRAIL_OPACITIES[i], duration: 1.0 });
+            });
             // Once the field is back, hand control to the looping ambient + idle.
             gsap.delayedCall(1.0, () => {
               restoreAmbient();
@@ -515,8 +588,35 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
 
   return (
     <group ref={groupRef}>
-      {/* Opaque obsidian orb with a faint nebula emissive — casts a clean floor
-          shadow (no bleed-through) and catches the nebula lights' gloss. */}
+      {/* Dark breathing aura — a deep purple BackSide shell rendered first so it
+          surrounds the die as atmospheric weight (dark matter), not an outward
+          glow. Does not cast a shadow. */}
+      <mesh castShadow={false}>
+        <sphereGeometry args={[2.0, 32, 32]} />
+        <meshBasicMaterial
+          ref={auraMatRef}
+          color="#1a1040"
+          transparent
+          opacity={0.25}
+          side={THREE.BackSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Inner atmosphere layer between the orb and the aura, adding depth. */}
+      <mesh castShadow={false}>
+        <sphereGeometry args={[1.85, 32, 32]} />
+        <meshBasicMaterial
+          color="#0a0820"
+          transparent
+          opacity={0.15}
+          side={THREE.FrontSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* Opaque obsidian orb with a faint nebula emissive — the ONLY shadow
+          caster, casting a clean floor shadow (no bleed-through). */}
       <mesh castShadow receiveShadow={false} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
         <sphereGeometry args={[1.5, 64, 64]} />
         <meshPhysicalMaterial
@@ -531,8 +631,8 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
         />
       </mesh>
 
-      {/* Ice-blue atmospheric halo. */}
-      <mesh>
+      {/* Ice-blue atmospheric halo (brightens on hover). */}
+      <mesh castShadow={false}>
         <sphereGeometry args={[1.58, 48, 48]} />
         <meshBasicMaterial
           ref={atmosMatRef}
@@ -543,10 +643,10 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
         />
       </mesh>
 
-      {/* Faint coloured nebula fog — interior depth that drifts as the orb turns.
-          depth-test off so it reads through the opaque orb. */}
+      {/* Faint coloured nebula fog — interior depth, visible as subtle colour
+          shifts as the orb turns. depth-test off so it reads through the orb. */}
       {NEBULA_FOG.map((f, i) => (
-        <mesh key={`fog-${i}`} position={[f.pos[0], f.pos[1], f.pos[2]]}>
+        <mesh key={`fog-${i}`} position={[f.pos[0], f.pos[1], f.pos[2]]} castShadow={false}>
           <sphereGeometry args={[f.radius, 16, 16]} />
           <meshBasicMaterial
             color={f.color}
@@ -574,7 +674,7 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
 
       {/* Distant depth stars — tiny, dim, static (no twinkle). */}
       {distantStars.map((s, i) => (
-        <mesh key={`dist-${i}`} position={[s.x, s.y, s.z]}>
+        <mesh key={`dist-${i}`} position={[s.x, s.y, s.z]} castShadow={false}>
           <sphereGeometry args={[s.size, 6, 6]} />
           <meshBasicMaterial
             color={s.color}
@@ -586,30 +686,14 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
         </mesh>
       ))}
 
-      {/* Random constellation lines (bright stars), drawn over the opaque orb. */}
-      {linePositions.length >= 6 && (
-        <lineSegments>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" args={[linePositions, 3]} />
-          </bufferGeometry>
-          <lineBasicMaterial
-            ref={lineMatRef}
-            color="#94b8ff"
-            transparent
-            opacity={0.3}
-            depthTest={false}
-            depthWrite={false}
-          />
-        </lineSegments>
-      )}
-
       {/* The hidden d20 constellation — its wireframe traced in the brightest
-          stars, a touch brighter than the random web. An easter egg. */}
+          stars, now the only constellation inside the orb. An easter egg. */}
       <lineSegments>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[D20_LINE_POSITIONS, 3]} />
         </bufferGeometry>
         <lineBasicMaterial
+          ref={lineMatRef}
           color="#a9c4ff"
           transparent
           opacity={0.35}
@@ -676,19 +760,51 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
       {/* Drifting particle ring around the orb. */}
       <Sparkles count={40} size={1.5} scale={[4, 4, 4]} speed={0.3} opacity={0.3} color="#94b8ff" />
 
-      {/* Saturn-like orbital ring — tilted off-horizontal, occluded by the orb
-          where it passes behind, turning on its own slow clock (see useFrame). */}
+      {/* Saturn-like ring system — tilted off-horizontal, slowly counter-rotating
+          (see useFrame). It carries the ring itself plus a comet + trail that
+          orbit it like a tiny shooting star circling a planet. None cast a
+          shadow; all are occluded by the orb where they pass behind it. */}
       <group rotation={[THREE.MathUtils.degToRad(15), 0, 0]}>
-        <mesh ref={ringRef}>
-          <torusGeometry args={[1.6, 0.008, 8, 64]} />
-          <meshBasicMaterial color="#94b8ff" transparent opacity={0.15} depthWrite={false} />
-        </mesh>
+        <group ref={ringSysRef}>
+          <mesh castShadow={false}>
+            <torusGeometry args={[1.65, 0.012, 8, 128]} />
+            <meshBasicMaterial ref={ringMatRef} color="#b0c8ff" transparent opacity={0.35} depthWrite={false} />
+          </mesh>
+
+          {/* The comet — a small bright sphere orbiting the ring path. */}
+          <mesh ref={cometRef} castShadow={false}>
+            <sphereGeometry args={[0.04, 16, 16]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+
+          {/* The comet's tail — follow-the-leader spheres, shrinking + fading. */}
+          {TRAIL_SIZES.map((sz, i) => (
+            <mesh
+              key={`trail-${i}`}
+              ref={(el) => {
+                trailRefs.current[i] = el;
+              }}
+              castShadow={false}
+            >
+              <sphereGeometry args={[sz, 12, 12]} />
+              <meshBasicMaterial
+                ref={(el) => {
+                  trailMatRefs.current[i] = el;
+                }}
+                color={TRAIL_COLORS[i]}
+                transparent
+                opacity={TRAIL_OPACITIES[i]}
+                depthWrite={false}
+              />
+            </mesh>
+          ))}
+        </group>
       </group>
 
       {/* Nat-100 celebration halo — billboarded so it always faces the camera,
           invisible (opacity 0) until a cosmic event blooms it outward. */}
       <Billboard>
-        <mesh ref={haloRef}>
+        <mesh ref={haloRef} castShadow={false}>
           <ringGeometry args={[1.5, 1.62, 64]} />
           <meshBasicMaterial
             ref={haloMatRef}
@@ -701,8 +817,4 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
       </Billboard>
     </group>
   );
-}
-
-function dist2(a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) {
-  return (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2;
 }
