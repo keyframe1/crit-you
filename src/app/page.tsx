@@ -24,7 +24,7 @@ export default function Home() {
         value,
         max,
         dieType,
-        line: pickLine(value, max),
+        line: pickLine(dieType, value),
       });
     },
     [dieType]

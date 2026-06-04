@@ -5,17 +5,53 @@ import gsap from "gsap";
 import {
   SHAPES,
   maxFor,
+  animFor,
   DIE_STROKE,
   OUTER_WEIGHT,
   INNER_WEIGHT,
   type DieType,
+  type TweenStep,
 } from "@/lib/dice";
 
 interface Props {
   dieType: DieType;
-  // Fired once the die settles, with the rolled value. The parent owns the
-  // result number, personality line, and share state.
+  // Fired once the result is revealed, with the rolled value. The parent owns
+  // the result number, personality line, and share state.
   onRoll: (value: number) => void;
+}
+
+// Build and play a GSAP timeline from a list of TweenSteps on `el`, calling
+// `onDone` when the whole sequence finishes. This is the generic engine behind
+// every die's celebration (nat max) and failure (nat 1) flourish — the steps
+// themselves live as data in lib/dice's AnimConfig, never as conditionals here.
+function playSequence(
+  el: SVGSVGElement,
+  steps: TweenStep[],
+  onDone: () => void
+) {
+  const tl = gsap.timeline({ onComplete: onDone });
+  for (const s of steps) {
+    if (s.set) {
+      tl.set(el, s.set);
+    } else if (s.hold != null) {
+      tl.to({}, { duration: s.hold }); // an empty beat — a deliberate pause
+    } else if (s.keyframes) {
+      tl.to(el, {
+        keyframes: s.keyframes,
+        duration: s.duration ?? 0.3,
+        ease: s.ease ?? "power2.out",
+        delay: s.delay ?? 0,
+      });
+    } else if (s.to) {
+      tl.to(el, {
+        ...s.to,
+        duration: s.duration ?? 0.3,
+        ease: s.ease ?? "power2.out",
+        delay: s.delay ?? 0,
+      });
+    }
+  }
+  return tl;
 }
 
 export default function Dice({ dieType, onRoll }: Props) {
@@ -33,14 +69,22 @@ export default function Dice({ dieType, onRoll }: Props) {
     onRollRef.current = onRoll;
   }, [onRoll]);
 
-  // The shared idle float: sinusoidal Y (4px) + slight rotateX (2°), forever.
+  // Latest selected die, readable from the stable idle callback so the float
+  // picks up the right per-die timing (e.g. the d30's slower, grander drift).
+  const dieRef = useRef(dieType);
+  useEffect(() => {
+    dieRef.current = dieType;
+  }, [dieType]);
+
+  // The shared idle float, tuned per die: sinusoidal Y + slight rotateX, forever.
   const startIdle = useCallback(() => {
     const body = bodyRef.current;
     if (!body) return;
+    const { y, rotateX, duration } = animFor(dieRef.current).float;
     gsap.to(body, {
-      y: 4,
-      rotateX: 2,
-      duration: 2.5,
+      y,
+      rotateX,
+      duration,
       ease: "sine.inOut",
       yoyo: true,
       repeat: -1,
@@ -57,7 +101,7 @@ export default function Dice({ dieType, onRoll }: Props) {
   }, [startIdle]);
 
   // Cross-fade when the selected die changes: fade/scale out, swap the SVG,
-  // then spring back in and restart the idle float.
+  // then spring back in and restart the (now per-die) idle float.
   const isFirst = useRef(true);
   useEffect(() => {
     if (isFirst.current) {
@@ -100,30 +144,42 @@ export default function Dice({ dieType, onRoll }: Props) {
     const glow = glowRef.current;
     const max = maxFor(dieType);
     const num = Math.floor(Math.random() * max) + 1;
+    const cfg = animFor(dieType);
+    const { tumble } = cfg;
 
     // Kill the idle float for the duration of the roll.
     gsap.killTweensOf(body);
 
-    // Phase 1 — 3D tumble in.
+    // Phase 1 — 3D tumble in, with this die's snap, spread, and squash.
     gsap.to(body, {
       rotateX: 360,
       rotateY: 360,
-      rotateZ: gsap.utils.random(-40, 40),
-      scale: 0.82,
-      duration: 0.35,
-      ease: "power2.in",
+      rotateZ: gsap.utils.random(-tumble.rotateZ, tumble.rotateZ),
+      scale: tumble.scale,
+      duration: tumble.p1Dur,
+      ease: tumble.p1Ease,
       onComplete: () => {
-        // Phase 2 — settle with a back.out overshoot.
+        // Phase 2 — settle with this die's overshoot.
         gsap.to(body, {
           rotateX: 0,
           rotateY: 0,
           rotateZ: 0,
           scale: 1,
-          duration: 0.4,
-          ease: "back.out(2.5)",
+          duration: tumble.p2Dur,
+          ease: tumble.p2Ease,
           onComplete: () => {
-            startIdle();
-            setRolling(false);
+            // Once settled, the die reacts to its own result, then resumes idle.
+            const finish = () => {
+              startIdle();
+              setRolling(false);
+            };
+            if (num >= max && cfg.celebrate.length) {
+              playSequence(body, cfg.celebrate, finish);
+            } else if (num <= 1 && cfg.fail.length) {
+              playSequence(body, cfg.fail, finish);
+            } else {
+              finish();
+            }
           },
         });
       },
@@ -132,11 +188,11 @@ export default function Dice({ dieType, onRoll }: Props) {
     // Reveal the result mid-tumble (the parent renders the number).
     gsap.delayedCall(0.4, () => onRollRef.current(num));
 
-    // Radial glow pulse behind the die on a natural max.
+    // Radial glow pulse behind the die on a natural max, intensity per die.
     if (num === max && glow) {
       gsap.fromTo(
         glow,
-        { opacity: 0.7, scale: 0.8 },
+        { opacity: cfg.glowOpacity, scale: 0.8 },
         { opacity: 0, scale: 1.3, duration: 0.8, ease: "power2.out" }
       );
     }

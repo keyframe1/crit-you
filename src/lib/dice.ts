@@ -159,3 +159,89 @@ export const SHAPES: Record<DieType, DieShape> = {
 export const DIE_STROKE = "#e8e4dc";
 export const OUTER_WEIGHT = 2.2;
 export const INNER_WEIGHT = 1.0;
+
+// ─── Per-die animation character ────────────────────────────────────────────
+// Every die runs the same engine — idle float, two-phase roll tumble, result
+// number, nat-max glow — but each one is tuned to read as a character. All the
+// timings live here as data; Dice.tsx and RollResult.tsx are generic
+// interpreters of these configs, so there are no per-die conditionals baked
+// into the components.
+
+// One step in a celebration/failure sequence played on the die's SVG body.
+// Exactly one of `to`, `keyframes`, `set`, or `hold` is meaningful per step;
+// the sequence runner walks them in order to build a GSAP timeline.
+export interface TweenStep {
+  to?: Record<string, number>; // tween to these transform values
+  keyframes?: Record<string, number[]>; // multi-stop keyframe tween on one prop
+  set?: Record<string, number>; // instant set, no tween
+  hold?: number; // an empty beat (seconds) before the next step — a pause
+  duration?: number;
+  ease?: string;
+  delay?: number; // gap before this step starts (used to "hold" a pose)
+}
+
+// How the big result number reacts to a natural 1. The number lives in its own
+// component, so its failure flavour is named here and interpreted there.
+export type NumberFail =
+  | "shake" // spring in, then a disappointed side-to-side shake (the d20)
+  | "spring" // spring in cleanly — the die's body does the reacting instead
+  | "flat" // no spring at all; it just appears (the d6's pure boredom)
+  | "flicker" // spring in, then flicker like a glitching calculator (the d10)
+  | "delay-slow"; // a beat of silence, then a slow fade-in (the d12's tragedy)
+
+export interface AnimConfig {
+  // Idle float — sinusoidal Y bob + slight rotateX, forever, killed on roll.
+  float: { y: number; rotateX: number; duration: number };
+  // Two-phase roll tumble: a tumble-in (p1) then a settle with overshoot (p2).
+  tumble: {
+    p1Dur: number;
+    p1Ease: string;
+    rotateZ: number; // random rotateZ amplitude (±this) on the tumble-in
+    scale: number; // how far it shrinks at the bottom of the tumble
+    p2Dur: number;
+    p2Ease: string;
+  };
+  glowOpacity: number; // peak opacity of the nat-max radial glow
+  celebrate: TweenStep[]; // body flourish on a natural max (empty = none)
+  fail: TweenStep[]; // body flourish on a natural 1 (empty = none)
+  numberFail: NumberFail; // how the result number reacts on a natural 1
+}
+
+// The benchmark — the exact rerollgaming.com d20 feel. Every other die is
+// described as a deviation from this, so it doubles as the default each die
+// starts from before its own character is dialled in.
+export const DEFAULT_ANIM: AnimConfig = {
+  float: { y: 4, rotateX: 2, duration: 2.5 },
+  tumble: {
+    p1Dur: 0.35,
+    p1Ease: "power2.in",
+    rotateZ: 40,
+    scale: 0.82,
+    p2Dur: 0.4,
+    p2Ease: "back.out(2.5)",
+  },
+  glowOpacity: 0.7,
+  // The gold-standard celebration: the glow pulse (fired separately) plus a
+  // confident scale overshoot.
+  celebrate: [
+    { to: { scale: 1.12 }, duration: 0.25, ease: "back.out(3)" },
+    { to: { scale: 1 }, duration: 0.35, ease: "power2.out" },
+  ],
+  fail: [], // the d20's failure lives entirely in the number's shake
+  numberFail: "shake",
+};
+
+// Each die starts as the benchmark; its own commit dials in its character.
+export const ANIM: Record<DieType, AnimConfig> = {
+  d4: DEFAULT_ANIM,
+  d6: DEFAULT_ANIM,
+  d8: DEFAULT_ANIM,
+  d10: DEFAULT_ANIM,
+  d12: DEFAULT_ANIM,
+  d20: DEFAULT_ANIM, // d20 IS the benchmark — do not change it
+  d30: DEFAULT_ANIM,
+};
+
+export function animFor(type: DieType): AnimConfig {
+  return ANIM[type];
+}
