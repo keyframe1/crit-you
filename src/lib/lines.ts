@@ -21,6 +21,7 @@ const RANGES: Record<DieType, { lowMax: number; midMax: number }> = {
   d12: { lowMax: 4, midMax: 8 }, // 2-4 low · 5-8 mid · 9-11 high
   d20: { lowMax: 5, midMax: 15 }, // 2-5 low · 6-15 mid · 16-19 high
   d30: { lowMax: 8, midMax: 21 }, // 2-8 low · 9-21 mid · 22-29 high
+  dinf: { lowMax: 25, midMax: 75 }, // 2-25 low · 26-75 mid · 76-99 high (d100)
 };
 
 export function categoryFor(dieType: DieType, value: number): Category {
@@ -508,6 +509,66 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Thirty out of thirty. The d20 is, for once, speechless. Savor its silence.",
       "Perfection, on thirty sides. Statistically rarer than the company you keep.",
       "A natural thirty. Frame it in velvet. Light a candle. You've touched the exotic.",
+    ],
+  },
+  // ═══ D∞ — "The Celestial / The Oracle" ═══
+  // An impossible die — a d100 rendered as a sphere of stars. Speaks like an
+  // ancient cosmic entity: eerily calm, never snarky, knows things.
+  dinf: {
+    nat_min: [
+      "The void stares back.",
+      "Even the stars go dark sometimes.",
+      "One. The loneliest number in any universe.",
+      "The cosmos exhaled, and you were forgotten.",
+      "A single point of light, guttering out. How fitting.",
+      "Across infinite worlds, this was the worst of them.",
+      "The constellations turn away. They have seen enough.",
+      "One. The universe is vast, and indifferent to you tonight.",
+      "Entropy wins, as it always does. Begin again.",
+    ],
+    low: [
+      "The cosmos has its reasons. None of them favor you.",
+      "Patience. The universe unfolds as it must.",
+      "A faint star, barely seen. But seen.",
+      "The wheel of heaven turns slowly. You are near its bottom.",
+      "A small light against a great dark. Persist.",
+      "The stars are distant tonight. They will return.",
+      "A modest fate, written in a quiet corner of the sky.",
+      "Low. The constellations neither rise nor fall for this.",
+      "The cosmos counts in eons. Your moment is small.",
+    ],
+    mid: [
+      "Acceptable. The stars neither celebrate nor mourn.",
+      "The wheel turns. You are somewhere upon it.",
+      "A balanced fate. The universe keeps its ledger even.",
+      "Neither blessed nor cursed. Simply held, for now.",
+      "The heavens are vast enough to contain mediocrity.",
+      "Midway between dust and starlight, as most things are.",
+      "The cosmos observes, and withholds its judgment.",
+      "A number in the middle of the great spiral. Unremarkable. Eternal.",
+      "The orbit holds. Nothing rises, nothing falls.",
+    ],
+    high: [
+      "The constellations align in your favor. For now.",
+      "Ninety-three. The cosmos whispers approval.",
+      "The stars lean close, curious about you.",
+      "A bright fate, written in the high heavens.",
+      "The wheel lifts you near its summit. Do not look down.",
+      "Eighty-eight. The night sky brightens at your name.",
+      "Favorable. The old lights conspire on your behalf.",
+      "Nearly perfect. The cosmos is, briefly, on your side.",
+      "High among the stars. They have not forgotten you after all.",
+    ],
+    nat_max: [
+      "One hundred. The universe bends. Even I am impressed.",
+      "Perfect. The stars themselves bear witness.",
+      "A hundred. The heavens have rendered their verdict: you.",
+      "Every constellation turns to face you. This is rare.",
+      "The cosmos, infinite and ancient, pauses to take note.",
+      "One hundred out of one hundred. The void itself applauds.",
+      "Perfection. Somewhere, a new star is named for this.",
+      "The wheel completes. You stand at the apex of all sky.",
+      "A flawless hundred. Remember it — the universe rarely repeats itself.",
     ],
   },
 };

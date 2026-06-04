@@ -8,6 +8,7 @@ import {
   DIE_STROKE,
   animFor,
   faceColor,
+  labelFor,
   type DieType,
 } from "@/lib/dice";
 
@@ -24,6 +25,30 @@ const MINI_SILHOUETTE = 3;
 function MiniDie({ type, active }: { type: DieType; active: boolean }) {
   const shape = SHAPES[type];
   const color = animFor(type).color;
+
+  // The celestial die has no facets — a tiny constellation instead.
+  if (type === "dinf") {
+    const c = active ? color : DIE_STROKE;
+    return (
+      <svg viewBox="0 0 160 160" className="w-full h-full" style={{ overflow: "visible" }}>
+        <circle
+          cx="80"
+          cy="80"
+          r="66"
+          fill="#080818"
+          fillOpacity={0.6}
+          stroke={c}
+          strokeWidth={3}
+          strokeOpacity={0.45}
+        />
+        <circle cx="58" cy="58" r="6" fill={c} />
+        <circle cx="104" cy="70" r="5" fill={c} />
+        <circle cx="74" cy="106" r="6" fill={c} />
+        <circle cx="110" cy="108" r="4" fill={c} />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 160 160" className="w-full h-full" style={{ overflow: "visible" }}>
       {shape.faces.map((f, i) => {
@@ -150,7 +175,7 @@ export default function DiceSelector({ value, onChange }: Props) {
               onClick={() => (active ? center(i) : onChange(d.type))}
               className="flex flex-col items-center justify-end shrink-0 transition-all duration-300 outline-none"
               style={{ opacity: active ? 1 : 0.4 }}
-              aria-label={`Select ${d.type.toUpperCase()}`}
+              aria-label={`Select ${labelFor(d.type)}`}
               aria-pressed={active}
             >
               <div
@@ -170,7 +195,7 @@ export default function DiceSelector({ value, onChange }: Props) {
                 className="font-mono text-[9px] tracking-[0.18em] mt-2"
                 style={{ color: active ? sig : "var(--light)" }}
               >
-                {d.type.toUpperCase()}
+                {labelFor(d.type)}
               </span>
             </button>
           );

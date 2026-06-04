@@ -1,4 +1,4 @@
-import { isNatMax, isNatMin, type Roll } from "@/lib/dice";
+import { isNatMax, isNatMin, labelFor, type Roll } from "@/lib/dice";
 
 const SIZE = 1080;
 
@@ -78,7 +78,7 @@ export function renderShareCard(roll: Roll, now: Date = new Date()): HTMLCanvasE
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.font = mono(34, "500");
-  ctx.fillText(roll.dieType.toUpperCase(), 80, 80);
+  ctx.fillText(labelFor(roll.dieType), 80, 80);
 
   // The number, large and centred.
   ctx.fillStyle = numberColor;

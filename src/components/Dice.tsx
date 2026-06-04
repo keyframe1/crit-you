@@ -7,6 +7,8 @@ import {
   maxFor,
   animFor,
   faceColor,
+  CELESTIAL_STARS,
+  CELESTIAL_LINES,
   DIE_STROKE,
   EDGE_WEIGHT,
   EDGE_OPACITY,
@@ -24,15 +26,14 @@ interface Props {
 }
 
 // Build and play a GSAP timeline from a list of TweenSteps on `el`, calling
-// `onDone` when finished. The generic engine behind every die's body flourish
-// (celebration / failure) — the steps themselves live as data in lib/dice.
+// `onDone` when finished. The generic engine behind every die's body flourish.
 function playSequence(el: Element, steps: TweenStep[], onDone?: () => void) {
   const tl = gsap.timeline({ onComplete: onDone });
   for (const s of steps) {
     if (s.set) {
       tl.set(el, s.set);
     } else if (s.hold != null) {
-      tl.to({}, { duration: s.hold }); // an empty beat — a deliberate pause
+      tl.to({}, { duration: s.hold });
     } else if (s.keyframes) {
       tl.to(el, {
         keyframes: s.keyframes,
@@ -55,64 +56,73 @@ function playSequence(el: Element, steps: TweenStep[], onDone?: () => void) {
 export default function Dice({ dieType, onRoll }: Props) {
   const bodyRef = useRef<SVGSVGElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const flareRef = useRef<HTMLDivElement>(null);
   const shadowRef = useRef<HTMLDivElement>(null);
   const numberRef = useRef<SVGTextElement>(null);
+  const twitchRef = useRef<HTMLDivElement>(null);
+  const starsRef = useRef<SVGGElement>(null);
+  const linesRef = useRef<SVGGElement>(null);
+  const twinkles = useRef<gsap.core.Tween[]>([]);
   // The shape currently drawn. Lags `dieType` so we can fade the old die out
   // before swapping the SVG and fading the new one in.
   const [shapeType, setShapeType] = useState<DieType>(dieType);
   const [rolling, setRolling] = useState(false);
   const [hovered, setHovered] = useState(false);
 
-  // Keep the latest onRoll without resubscribing the roll handler.
   const onRollRef = useRef(onRoll);
   useEffect(() => {
     onRollRef.current = onRoll;
   }, [onRoll]);
 
-  // Latest selected die, readable from the stable idle callback so the float
-  // picks up the right per-die timing (e.g. the d30's slower, grander drift).
   const dieRef = useRef(dieType);
   useEffect(() => {
     dieRef.current = dieType;
   }, [dieType]);
 
-  // The idle float, tuned per die: a slow, visible Y bob (±y/2 around rest)
-  // plus a slight rotateX, a rotateZ sway, and a rotateY tilt that shifts the
-  // facets in perspective. The contact shadow runs on the SAME clock, inverted
-  // — widest & faintest when the die is at the top of its bob, tight & dark at
-  // the bottom. That inverse motion is what sells "floating".
+  // The idle float, tuned per die: a slow Y bob (±y/2 around rest), slight
+  // rotateX, a rotateZ sway, and a rotateY tilt. It eases up from wherever the
+  // die currently is (no snap), then loops. The contact shadow runs on the same
+  // clock, inverted, so it widens/fades as the die rises.
   const startIdle = useCallback(() => {
     const body = bodyRef.current;
     if (!body) return;
     const { y, rotateX, rotateZ, rotateY, duration } = animFor(
       dieRef.current
     ).float;
-    gsap.set(body, { y: -y / 2 });
     gsap.to(body, {
-      y: y / 2,
-      rotateX,
-      rotateZ,
-      rotateY,
-      duration,
-      ease: "sine.inOut",
-      yoyo: true,
-      repeat: -1,
+      y: -y / 2,
+      rotateX: 0,
+      rotateZ: 0,
+      rotateY: 0,
+      duration: 0.6,
+      ease: "sine.out",
+      onComplete: () => {
+        gsap.to(body, {
+          y: y / 2,
+          rotateX,
+          rotateZ,
+          rotateY,
+          duration,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+        });
+        const shadow = shadowRef.current;
+        if (shadow) {
+          gsap.set(shadow, { scaleX: 1.2, opacity: 0.15 });
+          gsap.to(shadow, {
+            scaleX: 0.8,
+            opacity: 0.35,
+            duration,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: -1,
+          });
+        }
+      },
     });
-    const shadow = shadowRef.current;
-    if (shadow) {
-      gsap.set(shadow, { scaleX: 1.2, opacity: 0.15 });
-      gsap.to(shadow, {
-        scaleX: 0.8,
-        opacity: 0.35,
-        duration,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-      });
-    }
   }, []);
 
-  // Kick off the idle float on mount.
   useEffect(() => {
     startIdle();
     const body = bodyRef.current;
@@ -123,28 +133,74 @@ export default function Dice({ dieType, onRoll }: Props) {
     };
   }, [startIdle]);
 
-  // Reveal the result number inside the die. It is already at its final size —
-  // it simply materialises with a fade, never scaling in from a larger size.
-  // Nat max pulses once after appearing; nat min fades in slower and dimmer.
+  // Constant asynchronous star twinkle + a slow constellation-line pulse, for
+  // the celestial die only. Restartable so the celebration/failure can take
+  // over and then resume it.
+  const startTwinkle = useCallback(() => {
+    twinkles.current.forEach((t) => t.kill());
+    twinkles.current = [];
+    const starsEl = starsRef.current;
+    const linesEl = linesRef.current;
+    if (starsEl) {
+      Array.from(starsEl.children).forEach((star) => {
+        const dur = 1.5 + Math.random() * 1.5;
+        const delay = Math.random() * 2;
+        const hi = 0.6 + Math.random() * 0.4;
+        twinkles.current.push(
+          gsap.fromTo(
+            star,
+            { opacity: 0.3 },
+            {
+              opacity: hi,
+              duration: dur,
+              delay,
+              repeat: -1,
+              yoyo: true,
+              ease: "sine.inOut",
+            }
+          )
+        );
+      });
+    }
+    if (linesEl) {
+      gsap.set(linesEl, { opacity: 0.15 });
+      twinkles.current.push(
+        gsap.to(linesEl, {
+          opacity: 0.35,
+          duration: 4,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        })
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    if (shapeType === "dinf") startTwinkle();
+    return () => {
+      twinkles.current.forEach((t) => t.kill());
+      twinkles.current = [];
+    };
+  }, [shapeType, startTwinkle]);
+
+  // Reveal the result number inside the die — it fades in at its final size,
+  // never scaling from larger. Nat max pulses once; nat min fades slower/dimmer.
   const revealNumber = useCallback(
-    (value: number, isMax: boolean, isMin: boolean) => {
+    (value: number, isMax: boolean, isMin: boolean, accent: string) => {
       const el = numberRef.current;
       if (!el) return;
       el.textContent = String(value);
-      el.style.fill = isMax ? "#c0392b" : isMin ? "#555555" : "#e8e4dc";
-      el.style.filter = isMax
-        ? "drop-shadow(0 0 8px rgba(192,57,43,0.6))"
-        : "none";
+      el.style.fill = isMax ? accent : isMin ? "#555555" : "#e8e4dc";
+      el.style.filter = isMax ? `drop-shadow(0 0 8px ${accent}99)` : "none";
 
       gsap.killTweensOf(el);
       const tl = gsap.timeline();
       tl.set(el, { opacity: 0, scale: 1, x: 0, y: 0, rotation: 0 });
       if (isMin) {
-        // Dejected: a slow fade-in to a reduced opacity.
         tl.to(el, { opacity: 0.7, duration: 0.7, ease: "power2.out" });
       } else if (isMax) {
         tl.to(el, { opacity: 1, duration: 0.4, ease: "power2.out" });
-        // A single subtle pulse once it's there.
         tl.to(el, {
           keyframes: { scale: [1, 1.08, 1] },
           duration: 0.3,
@@ -153,14 +209,12 @@ export default function Dice({ dieType, onRoll }: Props) {
       } else {
         tl.to(el, { opacity: 1, duration: 0.4, ease: "power2.out" });
       }
-      // Hold long enough to read, then simply fade out — no movement, no scale.
       tl.to(el, { opacity: 0, duration: 0.5, ease: "power2.in" }, "+=1.5");
     },
     []
   );
 
-  // Cross-fade when the selected die changes: fade/scale out, swap the SVG,
-  // then spring back in and restart the (now per-die) idle float.
+  // Cross-fade when the selected die changes.
   const isFirst = useRef(true);
   useEffect(() => {
     if (isFirst.current) {
@@ -200,6 +254,67 @@ export default function Dice({ dieType, onRoll }: Props) {
     });
   }, [dieType, startIdle]);
 
+  // The celestial die rolls with a slow majestic spin instead of a tumble.
+  const rollCelestial = useCallback(
+    (num: number, max: number, accent: string) => {
+      const body = bodyRef.current;
+      if (!body) return;
+      body.style.filter = "blur(1px)"; // stars blur during the spin
+      gsap.to(body, {
+        rotateZ: "+=720",
+        duration: 1.2,
+        ease: "power2.inOut",
+        onComplete: () => {
+          body.style.filter = "";
+          gsap.set(body, { rotateZ: 0 });
+          const finish = () => {
+            startIdle();
+            setRolling(false);
+          };
+          const stars = starsRef.current
+            ? Array.from(starsRef.current.children)
+            : [];
+          if (num >= max) {
+            // All stars flash, constellations flare, a lens-flare pulses out.
+            twinkles.current.forEach((t) => t.kill());
+            twinkles.current = [];
+            gsap.to(stars, { opacity: 1, duration: 0.2, ease: "power2.out" });
+            if (linesRef.current)
+              gsap.to(linesRef.current, { opacity: 0.8, duration: 0.2 });
+            if (flareRef.current)
+              gsap.fromTo(
+                flareRef.current,
+                { opacity: 0.7, scale: 0.5 },
+                { opacity: 0, scale: 1.7, duration: 0.6, ease: "power2.out" }
+              );
+            gsap.delayedCall(0.5, () => {
+              startTwinkle();
+              finish();
+            });
+          } else if (num <= 1) {
+            // The universe gives up: stars dim, constellations go dark.
+            twinkles.current.forEach((t) => t.kill());
+            twinkles.current = [];
+            gsap.to(stars, { opacity: 0.15, duration: 0.4, ease: "power2.out" });
+            if (linesRef.current)
+              gsap.to(linesRef.current, { opacity: 0.04, duration: 0.4 });
+            gsap.delayedCall(1, () => {
+              startTwinkle();
+              finish();
+            });
+          } else {
+            finish();
+          }
+        },
+      });
+      gsap.delayedCall(0.6, () => {
+        onRollRef.current(num);
+        revealNumber(num, num >= max, num <= 1, accent);
+      });
+    },
+    [startIdle, startTwinkle, revealNumber]
+  );
+
   const roll = useCallback(() => {
     if (rolling || !bodyRef.current) return;
     setRolling(true);
@@ -209,9 +324,8 @@ export default function Dice({ dieType, onRoll }: Props) {
     const max = maxFor(dieType);
     const num = Math.floor(Math.random() * max) + 1;
     const cfg = animFor(dieType);
-    const { tumble } = cfg;
+    const accent = dieType === "dinf" ? "#94b8ff" : "#c0392b";
 
-    // Kill the idle float (body + shadow) and hide any lingering number.
     gsap.killTweensOf(body);
     if (shadowRef.current) gsap.killTweensOf(shadowRef.current);
     if (numberRef.current) {
@@ -219,7 +333,13 @@ export default function Dice({ dieType, onRoll }: Props) {
       gsap.set(numberRef.current, { opacity: 0 });
     }
 
-    // Phase 1 — a heavy 3D tumble in.
+    if (dieType === "dinf") {
+      rollCelestial(num, max, accent);
+      return;
+    }
+
+    const { tumble } = cfg;
+    // Phase 1 — a weighted launch: one full spin + a gentle squish.
     gsap.to(body, {
       rotateX: 360,
       rotateY: 360,
@@ -228,12 +348,13 @@ export default function Dice({ dieType, onRoll }: Props) {
       duration: tumble.p1Dur,
       ease: tumble.p1Ease,
       onComplete: () => {
-        // Phase 2 — let the settle breathe, with this die's overshoot.
+        // The full spins (360 ≡ 0) are reset instantly so the settle doesn't
+        // unwind them — there's no jump, and phase 2 just eases the squish and
+        // twist out with a gentle overshoot.
+        gsap.set(body, { rotateX: 0, rotateY: 0 });
         gsap.to(body, {
-          rotateX: 0,
-          rotateY: 0,
-          rotateZ: 0,
           scale: 1,
+          rotateZ: 0,
           duration: tumble.p2Dur,
           ease: tumble.p2Ease,
           onComplete: () => {
@@ -253,13 +374,11 @@ export default function Dice({ dieType, onRoll }: Props) {
       },
     });
 
-    // Reveal the result mid-tumble — line to the parent, number inside the die.
     gsap.delayedCall(0.4, () => {
       onRollRef.current(num);
-      revealNumber(num, num >= max, num <= 1);
+      revealNumber(num, num >= max, num <= 1, accent);
     });
 
-    // Radial glow pulse behind the die on a natural max, intensity per die.
     if (num === max && glow) {
       gsap.fromTo(
         glow,
@@ -267,16 +386,62 @@ export default function Dice({ dieType, onRoll }: Props) {
         { opacity: 0, scale: 1.3, duration: 0.8, ease: "power2.out" }
       );
     }
-  }, [rolling, dieType, startIdle, revealNumber]);
+  }, [rolling, dieType, startIdle, revealNumber, rollCelestial]);
+
+  // Hover enter: set state, fire the d4 twitch, pulse the celestial constellations.
+  const onEnter = useCallback(() => {
+    setHovered(true);
+    const hv = animFor(dieRef.current).hover;
+    if (hv.twitch && twitchRef.current) {
+      gsap.fromTo(
+        twitchRef.current,
+        { rotation: -3 },
+        {
+          rotation: 3,
+          duration: 0.05,
+          repeat: 3,
+          yoyo: true,
+          ease: "sine.inOut",
+          onComplete: () => {
+            if (twitchRef.current)
+              gsap.to(twitchRef.current, { rotation: 0, duration: 0.05 });
+          },
+        }
+      );
+    }
+    if (dieRef.current === "dinf" && linesRef.current) {
+      gsap.fromTo(
+        linesRef.current,
+        { opacity: 0.4 },
+        {
+          opacity: 0.8,
+          duration: 0.35,
+          yoyo: true,
+          repeat: 1,
+          ease: "sine.inOut",
+        }
+      );
+    }
+  }, []);
 
   const shape = SHAPES[shapeType];
-  const color = animFor(shapeType).color;
-  const hoverMs = hovered ? 300 : 400;
+  const cfg = animFor(shapeType);
+  const color = cfg.color;
+  const hv = cfg.hover;
+  const isCelestial = shapeType === "dinf";
+  const hoverColor = hv.shadowColor ?? color;
+  const baseFilter = isCelestial
+    ? "drop-shadow(0 0 10px rgba(150,180,255,0.35))"
+    : `drop-shadow(0 0 0px ${color}00)`;
+  const hoverFilter = isCelestial
+    ? "drop-shadow(0 0 22px rgba(150,180,255,0.6))"
+    : `drop-shadow(0 0 20px ${hoverColor}${hv.glowAlpha})`;
+  const transMs = hovered ? hv.ms : 400;
 
   return (
     <div
       onClick={roll}
-      onPointerEnter={() => setHovered(true)}
+      onPointerEnter={onEnter}
       onPointerLeave={() => setHovered(false)}
       onPointerDown={() => setHovered(true)}
       onPointerCancel={() => setHovered(false)}
@@ -287,9 +452,7 @@ export default function Dice({ dieType, onRoll }: Props) {
         perspective: "600px",
       }}
     >
-      {/* Floating contact shadow, ~20px below the die. The wrapper centres it
-          and carries the hover response; the inner element is what GSAP pulses
-          inversely with the float. */}
+      {/* Floating contact shadow, ~20px below the die. */}
       <div
         className="absolute left-1/2 pointer-events-none"
         style={{
@@ -301,7 +464,7 @@ export default function Dice({ dieType, onRoll }: Props) {
             ? "translateX(-50%) scaleX(1.15)"
             : "translateX(-50%) scaleX(1)",
           opacity: hovered ? 0.7 : 1,
-          transition: `transform ${hoverMs}ms ease-out, opacity ${hoverMs}ms ease-out`,
+          transition: `transform ${transMs}ms ease-out, opacity ${transMs}ms ease-out`,
         }}
       >
         <div
@@ -316,7 +479,7 @@ export default function Dice({ dieType, onRoll }: Props) {
         />
       </div>
 
-      {/* Signature-coloured glow behind the die (nat-max pulse + swap tint). */}
+      {/* Signature-coloured glow behind the die (polyhedron nat-max pulse). */}
       <div
         ref={glowRef}
         className="absolute -inset-8 rounded-full pointer-events-none"
@@ -327,74 +490,124 @@ export default function Dice({ dieType, onRoll }: Props) {
         }}
       />
 
-      {/* Hover lift + signature drop-shadow live here, separate from the
-          GSAP-driven float/tumble on the SVG inside. */}
+      {/* Lens flare (celestial nat-100 only). */}
+      <div
+        ref={flareRef}
+        className="absolute -inset-10 rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(200,220,255,0.9), rgba(148,184,255,0.2) 40%, transparent 70%)",
+          opacity: 0,
+          zIndex: 15,
+        }}
+      />
+
+      {/* Per-die hover scale + signature drop-shadow. */}
       <div
         className="relative h-full w-full"
         style={{
           zIndex: 10,
-          transform: hovered ? "translateY(-8px)" : "translateY(0px)",
-          filter: hovered
-            ? `drop-shadow(0 0 20px ${color}33)`
-            : `drop-shadow(0 0 0px ${color}00)`,
-          transition: `transform ${hoverMs}ms ease-out, filter ${hoverMs}ms ease-out`,
+          transform: hovered ? `scale(${hv.scale})` : "scale(1)",
+          filter: hovered ? hoverFilter : baseFilter,
+          transition: `transform ${transMs}ms ${hv.ease}, filter ${transMs}ms ${hv.ease}`,
         }}
       >
-        <svg
-          ref={bodyRef}
-          className="w-full h-full"
-          viewBox="0 0 160 160"
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          {/* Solid, shaded facets (a same-colour hairline kills anti-alias
-              seams between adjacent faces). */}
-          {shape.faces.map((f, i) => {
-            const fc = faceColor(color, f.depth, hovered);
-            return (
-              <polygon
-                key={i}
-                points={f.points}
-                fill={fc}
-                stroke={fc}
-                strokeWidth={0.75}
-                strokeLinejoin="round"
-                style={{
-                  transition: `fill ${hoverMs}ms ease-out, stroke ${hoverMs}ms ease-out`,
-                }}
-              />
-            );
-          })}
-          {/* Internal facet edges — each drawn once, off-white, miter-sharp. */}
-          {shape.edges.map(([x1, y1, x2, y2], i) => (
-            <line
-              key={`e${i}`}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={DIE_STROKE}
-              strokeWidth={EDGE_WEIGHT}
-              strokeOpacity={EDGE_OPACITY}
-              strokeLinecap="round"
-            />
-          ))}
-          {/* Outer silhouette — a slightly bolder edge against the background. */}
-          {shape.polygons.map((points, i) => (
-            <polygon
-              key={`o${i}`}
-              points={points}
-              fill="none"
-              stroke={DIE_STROKE}
-              strokeWidth={SILHOUETTE_WEIGHT}
-              strokeOpacity={SILHOUETTE_OPACITY}
-              strokeLinejoin="round"
-            />
-          ))}
-        </svg>
+        {/* Twitch wrapper — only the d4 rotates this; it's identity otherwise. */}
+        <div ref={twitchRef} className="h-full w-full">
+          <svg
+            ref={bodyRef}
+            className="w-full h-full"
+            viewBox="0 0 160 160"
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            {isCelestial ? (
+              <>
+                {/* Transparent celestial sphere with constellations inside. */}
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="70"
+                  fill="#080818"
+                  fillOpacity={0.7}
+                />
+                <g ref={linesRef} style={{ opacity: 0.2 }}>
+                  {CELESTIAL_LINES.map(([x1, y1, x2, y2], i) => (
+                    <line
+                      key={i}
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke="#94b8ff"
+                      strokeWidth={0.5}
+                    />
+                  ))}
+                </g>
+                <g ref={starsRef}>
+                  {CELESTIAL_STARS.map((s, i) => (
+                    <circle
+                      key={i}
+                      cx={s.x}
+                      cy={s.y}
+                      r={s.r}
+                      fill="#ffffff"
+                      style={{ opacity: s.o }}
+                    />
+                  ))}
+                </g>
+              </>
+            ) : (
+              <>
+                {/* Solid, shaded facets (a same-colour hairline kills seams). */}
+                {shape.faces.map((f, i) => {
+                  const fc = faceColor(color, f.depth, hovered);
+                  return (
+                    <polygon
+                      key={i}
+                      points={f.points}
+                      fill={fc}
+                      stroke={fc}
+                      strokeWidth={0.75}
+                      strokeLinejoin="round"
+                      style={{
+                        transition: `fill ${transMs}ms ease-out, stroke ${transMs}ms ease-out`,
+                      }}
+                    />
+                  );
+                })}
+                {/* Internal facet edges — subtle, each drawn once. */}
+                {shape.edges.map(([x1, y1, x2, y2], i) => (
+                  <line
+                    key={`e${i}`}
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke={DIE_STROKE}
+                    strokeWidth={EDGE_WEIGHT}
+                    strokeOpacity={EDGE_OPACITY}
+                    strokeLinecap="round"
+                  />
+                ))}
+                {/* Outer silhouette. */}
+                {shape.polygons.map((points, i) => (
+                  <polygon
+                    key={`o${i}`}
+                    points={points}
+                    fill="none"
+                    stroke={DIE_STROKE}
+                    strokeWidth={SILHOUETTE_WEIGHT}
+                    strokeOpacity={SILHOUETTE_OPACITY}
+                    strokeLinejoin="round"
+                  />
+                ))}
+              </>
+            )}
+          </svg>
+        </div>
       </div>
 
-      {/* Result number, centred over the die in the same 160×160 user space so
-          it scales with the die. It fades in at its final size. */}
+      {/* Result number, centred over the die. */}
       <svg
         className="absolute inset-0 h-full w-full pointer-events-none"
         viewBox="0 0 160 160"
