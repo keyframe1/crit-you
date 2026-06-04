@@ -81,14 +81,17 @@ export default function DiceCanvas({ dieType, onRoll }: Props) {
       onClick={handleClick}
       className="relative cursor-pointer select-none"
       style={{
-        width: "clamp(200px, 55vmin, 320px)",
-        height: "clamp(200px, 55vmin, 320px)",
+        // A big square stage so the die genuinely dominates the page. Bounded by
+        // height in landscape (62vh) and by width on tall/mobile screens (82vmin)
+        // so it never crowds out the bubble above or the selector below.
+        width: "clamp(280px, min(82vmin, 62vh), 560px)",
+        height: "clamp(280px, min(82vmin, 62vh), 560px)",
       }}
     >
       <Canvas
         shadows
         dpr={[1, 2]}
-        camera={{ position: [0, 2, 6], fov: 45 }}
+        camera={{ position: [0, 1.5, 4], fov: 45 }}
         gl={{ alpha: true }}
       >
         {/* Warm ambient base matched to the cream page. */}
@@ -110,8 +113,9 @@ export default function DiceCanvas({ dieType, onRoll }: Props) {
         {/* Soft warm fill from the lower-right to lift the shadowed faces. */}
         <directionalLight position={[2, -1, 3]} intensity={0.3} color="#ffe8d6" />
 
-        {/* Invisible floor that only catches the die's shadow. */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.8, 0]} receiveShadow>
+        {/* Invisible floor that only catches the die's shadow — sits well below
+            the larger die so the shadow reads as a soft floating contact. */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.4, 0]} receiveShadow>
           <planeGeometry args={[40, 40]} />
           <shadowMaterial transparent opacity={0.12} />
         </mesh>
