@@ -86,26 +86,6 @@ const NEBULA_FOG = [
   { pos: [0.1, -0.45, -0.3], radius: 0.35, color: "#1a4a5a", opacity: 0.07 }, // teal
 ] as const;
 
-// EXTERIOR gas wisps — six soft, irregular, asymmetric blobs on a rough shell
-// around the orb. Overlapping translucent blobs of slightly different hue read as
-// gas, not geometry, and their uneven silhouette breaks the old hard circle. So
-// subtle you shouldn't be sure they're there.
-const WISPS: {
-  pos: [number, number, number];
-  radius: number;
-  color: string;
-  opacity: number;
-  freq: number;
-  phase: number;
-}[] = [
-  { pos: [1.15, 0.7, 0.35], radius: 0.85, color: "#1a2a6b", opacity: 0.07, freq: 0.7, phase: 0.0 },
-  { pos: [-1.35, 0.3, -0.45], radius: 0.7, color: "#3a1a5a", opacity: 0.06, freq: 0.9, phase: 1.3 },
-  { pos: [0.5, -1.25, 0.55], radius: 0.95, color: "#1a1840", opacity: 0.08, freq: 0.6, phase: 2.5 },
-  { pos: [-0.85, -1.0, 0.3], radius: 0.6, color: "#1a4a5a", opacity: 0.05, freq: 1.1, phase: 3.7 },
-  { pos: [1.45, -0.4, -0.6], radius: 0.8, color: "#3a1a5a", opacity: 0.06, freq: 0.8, phase: 4.6 },
-  { pos: [-0.6, 1.35, -0.35], radius: 0.75, color: "#1a2a6b", opacity: 0.07, freq: 1.0, phase: 5.5 },
-];
-
 // The comet's tail — eight spheres, each smaller and fainter than the last,
 // fading in colour from icy white-blue to the deep-space blue.
 const TRAIL_SIZES = [0.035, 0.03, 0.025, 0.02, 0.018, 0.015, 0.012, 0.01];
@@ -134,9 +114,8 @@ function mulberry32(seed: number) {
   };
 }
 
-// A soft radial-gradient texture on an offscreen canvas — the basis for the
-// feathered dark halo and the hero star's glow. The feathered alpha falloff
-// dissolves into the cream background with NO hard sphere edge to clip.
+// A soft radial-gradient texture on an offscreen canvas — the basis for the hero
+// star's glow. The feathered alpha falloff dissolves with no hard edge to clip.
 function radialTexture(stops: [number, string][], size = 256): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
@@ -185,13 +164,12 @@ function spikeTexture(size = 256): THREE.CanvasTexture {
 }
 
 // THE CELESTIAL (d100) — a polished obsidian orb that is a window into deep
-// space, wrapped in a feathered dark nebula (a soft halo + drifting gas wisps,
-// NOT a hard-edged sphere) that gives it weight without a circle. Over the orb:
-// ~100 twinkling stars + a static "distant" depth field, the hidden d20
-// constellation, cross-flare sparkles, a brilliant hero star, faint interior
-// nebula fog, nebula lights, and a tilted Saturn-like ring with a comet + trail.
-// All depth-test-off layers read through the solid orb. It RESOLVES with a
-// majestic spin rather than a tumble.
+// space, sitting on the clean cream background with only its natural floor
+// shadow (no exterior atmosphere). Over the orb: ~100 twinkling stars + a static
+// "distant" depth field, the hidden d20 constellation, cross-flare sparkles, a
+// brilliant hero star, faint interior nebula fog, nebula lights, and a tilted
+// Saturn-like ring with a comet + trail. All depth-test-off layers read through
+// the solid orb. It RESOLVES with a majestic spin rather than a tumble.
 export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const orbMatRef = useRef<THREE.MeshPhysicalMaterial>(null);
@@ -200,11 +178,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
   const nebRefs = useRef<(THREE.PointLight | null)[]>([]);
   const lineMatRef = useRef<THREE.LineBasicMaterial>(null); // the d20 constellation
   const atmosMatRef = useRef<THREE.MeshBasicMaterial>(null); // ice halo (hover)
-  const darkHaloRef = useRef<THREE.Sprite>(null); // feathered dark nebula halo
-  const darkHaloMatRef = useRef<THREE.SpriteMaterial>(null);
-  const wispGroupRef = useRef<THREE.Group>(null); // drifting gas wisps
-  const wispRefs = useRef<(THREE.Mesh | null)[]>([]);
-  const wispClock = useRef(0);
   const heroCoreMatRef = useRef<THREE.MeshBasicMaterial>(null); // hero star core
   const heroGlowRef = useRef<THREE.Sprite>(null);
   const heroGlowMatRef = useRef<THREE.SpriteMaterial>(null);
@@ -240,15 +213,10 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     boostRef
   );
 
-  // Soft canvas textures for the feathered halo + hero glow + hero spike, built
-  // once (client-only; this die is dynamically imported with ssr:false).
-  const { darkHaloTex, heroGlowTex, heroSpikeTex } = useMemo(
+  // Soft canvas textures for the hero star's glow + diffraction spike, built once
+  // (client-only; this die is dynamically imported with ssr:false).
+  const { heroGlowTex, heroSpikeTex } = useMemo(
     () => ({
-      darkHaloTex: radialTexture([
-        [0, "rgba(26,16,64,0.55)"],
-        [0.35, "rgba(20,12,48,0.30)"],
-        [1, "rgba(10,8,32,0.0)"],
-      ]),
       heroGlowTex: radialTexture([
         [0, "rgba(255,255,255,0.90)"],
         [0.25, "rgba(200,224,255,0.60)"],
@@ -261,11 +229,10 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
   );
   useEffect(
     () => () => {
-      darkHaloTex.dispose();
       heroGlowTex.dispose();
       heroSpikeTex.dispose();
     },
-    [darkHaloTex, heroGlowTex, heroSpikeTex]
+    [heroGlowTex, heroSpikeTex]
   );
 
   // The cosmos, generated once and seeded so it's pure during render: the random
@@ -338,7 +305,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
   const nebulaTweens = useRef<gsap.core.Tween[]>([]);
   const lineTween = useRef<gsap.core.Tween | null>(null);
   const emissiveTween = useRef<gsap.core.Tween | null>(null);
-  const haloTween = useRef<gsap.core.Tween | null>(null);
   const heroTweens = useRef<gsap.core.Tween[]>([]);
 
   const startTwinkle = useCallback(() => {
@@ -416,17 +382,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     );
   }, []);
 
-  // The dark nebula halo breathes slowly — an ominous living presence.
-  const startHalo = useCallback(() => {
-    haloTween.current?.kill();
-    if (!darkHaloMatRef.current) return;
-    haloTween.current = gsap.fromTo(
-      darkHaloMatRef.current,
-      { opacity: 0.85 },
-      { opacity: 1.0, duration: 6, yoyo: true, repeat: -1, ease: "sine.inOut" }
-    );
-  }, []);
-
   // The hero star shimmers: its glow swells and its diffraction spike breathes.
   const startHero = useCallback(() => {
     heroTweens.current.forEach((t) => t.kill());
@@ -456,8 +411,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     lineTween.current = null;
     emissiveTween.current?.kill();
     emissiveTween.current = null;
-    haloTween.current?.kill();
-    haloTween.current = null;
     heroTweens.current.forEach((t) => t.kill());
     heroTweens.current = [];
   }, []);
@@ -467,9 +420,8 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     startNebula();
     startLinePulse();
     startEmissive();
-    startHalo();
     startHero();
-  }, [startTwinkle, startNebula, startLinePulse, startEmissive, startHalo, startHero]);
+  }, [startTwinkle, startNebula, startLinePulse, startEmissive, startHero]);
 
   useEffect(() => {
     startIdle();
@@ -477,8 +429,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     // Capture refs now (stable for this die's lifetime) for unmount teardown.
     const grp = groupRef.current;
     const atmos = atmosMatRef.current;
-    const haloMat = darkHaloMatRef.current;
-    const haloSprite = darkHaloRef.current;
     const cHalo = haloRef.current;
     const cHaloMat = haloMatRef.current;
     return () => {
@@ -486,8 +436,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
       killAmbient();
       if (grp) gsap.killTweensOf(grp.scale);
       if (atmos) gsap.killTweensOf(atmos);
-      if (haloMat) gsap.killTweensOf(haloMat);
-      if (haloSprite) gsap.killTweensOf(haloSprite.scale);
       if (cHalo) gsap.killTweensOf(cHalo.scale);
       if (cHaloMat) gsap.killTweensOf(cHaloMat);
     };
@@ -495,7 +443,7 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
 
   // Per-frame motion that runs regardless of state: the ring system slowly
   // counter-rotates in its tilted plane, the comet orbits the ring path and the
-  // trail follows it, and the nebula gas drifts (group rotation + per-wisp sway).
+  // trail follows it.
   useFrame((_, delta) => {
     if (ringSysRef.current) ringSysRef.current.rotation.z -= delta * 0.03;
     const comet = cometRef.current;
@@ -514,18 +462,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
       }
       const first = trailRefs.current[0];
       if (first) first.position.copy(comet.position);
-    }
-    if (wispGroupRef.current) wispGroupRef.current.rotation.y += delta * 0.012;
-    wispClock.current += delta;
-    for (let i = 0; i < wispRefs.current.length; i++) {
-      const w = wispRefs.current[i];
-      if (!w) continue;
-      const base = WISPS[i];
-      w.position.set(
-        base.pos[0] + Math.sin(wispClock.current * base.freq + base.phase) * 0.08,
-        base.pos[1] + Math.cos(wispClock.current * base.freq * 0.8 + base.phase) * 0.08,
-        base.pos[2]
-      );
     }
   });
 
@@ -604,9 +540,8 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
         function resolveCosmos() {
         if (isMax) {
           // COSMIC EVENT: every star blazes, the d20 constellation flares, the
-          // nebula lights triple, the orb glows, the dark halo swells, the ring +
-          // comet flare and the comet sprints, the hero star goes supernova, a
-          // halo blooms.
+          // nebula lights triple, the orb glows, the ring + comet flare and the
+          // comet sprints, the hero star goes supernova, a halo blooms.
           starRefs.current.forEach((m) => {
             if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 1, duration: 0.2 });
           });
@@ -620,21 +555,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
               atmosMatRef.current,
               { opacity: 0.04 },
               { opacity: 0.15, duration: 0.5, yoyo: true, repeat: 1, ease: "power2.inOut" }
-            );
-          }
-          // The dark halo swells outward (scale + opacity, ~0.8s, then back).
-          if (darkHaloRef.current) {
-            gsap.fromTo(
-              darkHaloRef.current.scale,
-              { x: 3.8, y: 3.8 },
-              { x: 4.6, y: 4.6, duration: 0.4, yoyo: true, repeat: 1, ease: "power2.inOut" }
-            );
-          }
-          if (darkHaloMatRef.current) {
-            gsap.fromTo(
-              darkHaloMatRef.current,
-              { opacity: 0.9 },
-              { opacity: 1.0, duration: 0.4, yoyo: true, repeat: 1, ease: "power2.inOut" }
             );
           }
           // The hero star goes supernova: glow + spike bloom huge, then settle.
@@ -694,9 +614,9 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
           });
         } else if (isMin) {
           // COSMIC DARKNESS: stars gutter to near-black, the d20 constellation
-          // fades out too, the nebula lights die, the orb goes dark, the dark
-          // halo thins, the comet crawls + its trail vanishes, and the hero star
-          // dims with everything. Hold the void, then let it all recover.
+          // fades out too, the nebula lights die, the orb goes dark, the comet
+          // crawls + its trail vanishes, and the hero star dims with everything.
+          // Hold the void, then let it all recover.
           starRefs.current.forEach((m) => {
             if (m) gsap.to(m.material as THREE.MeshBasicMaterial, { opacity: 0.03, duration: 0.5 });
           });
@@ -705,7 +625,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
             if (l) gsap.to(l, { intensity: 0, duration: 0.5 });
           });
           if (orbMatRef.current) gsap.to(orbMatRef.current, { emissiveIntensity: 0.02, duration: 0.5 });
-          if (darkHaloMatRef.current) gsap.to(darkHaloMatRef.current, { opacity: 0.45, duration: 0.5 });
           [heroCoreMatRef, heroGlowMatRef, heroSpikeMatRef].forEach((r) => {
             if (r.current) gsap.to(r.current, { opacity: 0.1, duration: 0.5 });
           });
@@ -729,7 +648,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
               if (l) gsap.to(l, { intensity: NEBULA[i].max * 0.5, duration: 1.0 });
             });
             if (orbMatRef.current) gsap.to(orbMatRef.current, { emissiveIntensity: 0.5, duration: 1.0 });
-            if (darkHaloMatRef.current) gsap.to(darkHaloMatRef.current, { opacity: 0.9, duration: 1.0 });
             // The hero star recovers with the field.
             if (heroCoreMatRef.current) gsap.to(heroCoreMatRef.current, { opacity: 1, duration: 1.0 });
             if (heroGlowMatRef.current) gsap.to(heroGlowMatRef.current, { opacity: 1, duration: 1.0 });
@@ -775,45 +693,6 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
 
   return (
     <group ref={groupRef}>
-      {/* Feathered dark nebula halo — a soft radial sprite behind the orb. Its
-          alpha falloff dissolves into the cream with NO hard edge, giving the die
-          weight as a dark vignette. NORMAL blending (additive would erase a dark
-          layer); breathes via startHalo. */}
-      <sprite ref={darkHaloRef} position={[0, 0, -0.2]} scale={[3.8, 3.8, 1]}>
-        <spriteMaterial
-          ref={darkHaloMatRef}
-          map={darkHaloTex}
-          transparent
-          opacity={1}
-          depthWrite={false}
-          blending={THREE.NormalBlending}
-        />
-      </sprite>
-
-      {/* Drifting gas wisps — irregular, asymmetric, overlapping translucent blobs
-          that break the circle and read as gas. So subtle they're barely there. */}
-      <group ref={wispGroupRef}>
-        {WISPS.map((w, i) => (
-          <mesh
-            key={`wisp-${i}`}
-            ref={(el) => {
-              wispRefs.current[i] = el;
-            }}
-            position={[w.pos[0], w.pos[1], w.pos[2]]}
-            castShadow={false}
-          >
-            <sphereGeometry args={[w.radius, 16, 16]} />
-            <meshBasicMaterial
-              color={w.color}
-              transparent
-              opacity={w.opacity}
-              depthWrite={false}
-              blending={THREE.NormalBlending}
-            />
-          </mesh>
-        ))}
-      </group>
-
       {/* Opaque obsidian orb with a faint nebula emissive — the ONLY shadow
           caster, casting a clean floor shadow (no bleed-through). */}
       <mesh castShadow receiveShadow={false} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
