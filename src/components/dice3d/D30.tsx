@@ -29,8 +29,9 @@ export default function D30({ rollNonce, onResult, onRollStart }: Props) {
         p1Dur: 0.6,
         p2Dur: 0.7,
         p2Ease: "back.out(1.8)",
-        // A slow thud finished with a small, regal rotateZ correction.
-        thudRotateCorrect: true,
+        // The face-forward settle (PolyDie Phase 2) now owns the final pose, so
+        // the old regal rotateZ thud-correction is dropped — it would fight the
+        // settle slerp and knock the die back off its flat face.
         celebrate: celebrateD30,
         fail: failD30,
       }}

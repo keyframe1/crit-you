@@ -21,7 +21,9 @@ export default function D20({ rollNonce, onResult, onRollStart }: Props) {
       geometry={<icosahedronGeometry args={[1.5, 0]} />}
       config={{
         color: "#c0392b",
-        edgeWidth: 3,
+        // The hero die: edges a touch bolder than the rest of the set (3) so the
+        // centrepiece reads crisp and uniform at every rotation.
+        edgeWidth: 3.5,
         spinSpeed: 0.15,
         floatY: 0.15,
         floatDuration: 3.5,

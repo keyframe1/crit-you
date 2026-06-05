@@ -2,9 +2,12 @@
 
 import { useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 import type * as THREE from "three";
+import { Quaternion } from "three";
 import { Edges } from "@react-three/drei";
+import { useThree } from "@react-three/fiber";
 import gsap from "gsap";
 import { useIdleFloat } from "./useIdleFloat";
+import { faceForwardQuaternion, uniqueFaceNormals } from "./faceForward";
 import type { DieReaction } from "./reactions";
 import { DailyControlContext } from "./dailyControl";
 
@@ -74,8 +77,12 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
   } = config;
 
   const groupRef = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
   const flashRef = useRef<THREE.PointLight>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  // Distinct local-space face normals (computed once from the geometry) used to
+  // settle the die face-forward so the centred number stamps on a flat face.
+  const faceNormalsRef = useRef<THREE.Vector3[]>([]);
   // `rollingRef` gates the idle Y-spin (paused while the dice tumbles). `lockRef`
   // gates input: it stays held from the click through the full tumble, settle,
   // landing, and any reaction, so a rapid click can't interrupt or restart it.
@@ -103,6 +110,21 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
   const controlRef = useRef(control);
   useEffect(() => {
     controlRef.current = control;
+  });
+
+  // The scene camera, kept in a ref so the roll effect can aim the face-forward
+  // settle without re-subscribing (it never changes for this canvas).
+  const camera = useThree((s) => s.camera);
+  const cameraRef = useRef(camera);
+  useEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
+
+  // meshScale is a fresh array literal each render; hold it in a ref so the roll
+  // effect can read the current value without taking it as a dependency.
+  const meshScaleRef = useRef(meshScale);
+  useEffect(() => {
+    meshScaleRef.current = meshScale;
   });
 
   const { startIdle, killIdle } = useIdleFloat(
@@ -135,6 +157,13 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
       }
     };
   }, [startIdle, killIdle]);
+
+  // Compute the die's distinct face normals once the geometry has mounted, for
+  // the face-forward settle (see the roll effect's Phase 2).
+  useEffect(() => {
+    const m = meshRef.current;
+    if (m?.geometry) faceNormalsRef.current = uniqueFaceNormals(m.geometry);
+  }, []);
 
   // Roll whenever the nonce changes (but not on the initial mount value).
   const firstNonce = useRef(true);
@@ -174,18 +203,42 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
     gsap.to(g.position, { y: 0, duration: p1Dur, ease: "power2.in" });
     gsap.to(g.scale, { x: squish, y: squish, z: squish, duration: p1Dur, ease: "power2.in" });
 
-    // Phase 2 — settle: X and Z snap square with an overshoot, scale back to 1.
-    // Y is left where the tumble put it so the idle spin resumes seamlessly.
+    // Phase 2 — settle: scale eases back to 1 with an overshoot.
     gsap.to(g.scale, { x: 1, y: 1, z: 1, duration: p2Dur, delay: p1Dur, ease: p2Ease });
-    gsap.to(g.rotation, {
-      x: 0,
-      z: 0,
+
+    // Phase 2 — settle (orientation): rather than squaring X/Z to zero (which can
+    // rest an EDGE or VERTEX toward the camera, so the centred number overlay
+    // lands on a seam), slerp to a FACE-FORWARD pose — the most camera-facing
+    // face is rotated to point exactly at the lens, so the number always stamps
+    // on a clean, flat face. Same duration + overshoot ease as the old square-up,
+    // so the settle FEELS identical; Y is folded into the quaternion so the idle
+    // spin resumes seamlessly from the settled angle.
+    const settleProxy = { t: 0 };
+    const qStart = new Quaternion();
+    const qEnd = new Quaternion();
+    gsap.to(settleProxy, {
+      t: 1,
       duration: p2Dur,
       delay: p1Dur,
       ease: p2Ease,
+      onStart: () => {
+        // The tumble has just ended: capture the live orientation, then compute
+        // the minimal correction that brings the nearest face flat-on.
+        qStart.copy(g.quaternion);
+        if (faceNormalsRef.current.length === 0 && meshRef.current?.geometry) {
+          faceNormalsRef.current = uniqueFaceNormals(meshRef.current.geometry);
+        }
+        faceForwardQuaternion(g, faceNormalsRef.current, meshScaleRef.current, cameraRef.current, qEnd);
+      },
+      onUpdate: () => {
+        // back.out overshoots t past 1 then eases back; the slerp extrapolates
+        // with it, preserving the settle's overshoot character on the final pose.
+        g.quaternion.slerpQuaternions(qStart, qEnd, settleProxy.t);
+      },
       onComplete: () => {
-        // The die has settled square. The value is reported AFTER the landing, so
-        // the number is the payoff of a physical action rather than an overlay.
+        // The die has settled face-forward. The value is reported AFTER the
+        // landing, so the number is the payoff of a physical action, not an
+        // overlay — and it stamps onto the now-flat face.
         const revealAndFinish = () => {
           // Resume the idle float/spin and release the input lock.
           const resume = () => {
@@ -223,7 +276,8 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
         // Phase 3 — landing thud (0.15s): a sharp downward dip + a squash pulse.
         // power4.out reads as the die clicking onto a surface. Phase 4 —
         // recovery: ease back up to the idle baseline (y:0). d8 adds a small
-        // bounce; d30 a regal rotateZ correction. Then the value is reported.
+        // bounce. The thud only moves position/scale, so it never disturbs the
+        // face-forward orientation. Then the value is reported.
         const tl = gsap.timeline({ onComplete: revealAndFinish });
         tl.to(g.position, { y: -thudDrop, duration: 0.15, ease: "power4.out" }, 0);
         tl.to(g.scale, { x: thudScale, y: thudScale, z: thudScale, duration: 0.075, ease: "power4.out" }, 0);
@@ -308,6 +362,7 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
   return (
     <group ref={groupRef}>
       <mesh
+        ref={meshRef}
         castShadow
         scale={meshScale}
         onPointerOver={handlePointerOver}
@@ -323,7 +378,26 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
           roughness={0.55}
           flatShading
         />
-        <Edges threshold={1} color="#1a1a18" lineWidth={edgeWidth} transparent opacity={edgeOpacity} />
+        {/* Constant screen-space edges. drei's <Edges> is already LineSegments2 +
+            LineMaterial (fat lines) at a fixed pixel width, with its resolution
+            kept in sync with the canvas — so width is constant by construction.
+            The d20's shimmer/uneven look came from depth, not width: its
+            icosahedron has 30 edges at a shallow (~138°) dihedral, so each fat
+            edge quad z-fights its near-coplanar neighbour faces and gets half-
+            clipped, with the clipped half flipping as the die turns. A small
+            negative polygonOffset lifts the edges just in front of the faces, so
+            every edge reads crisp and uniform at every rotation (helps the cube/
+            octahedron/dodecahedron too, but the dense d20 needed it). */}
+        <Edges
+          threshold={1}
+          color="#1a1a18"
+          lineWidth={edgeWidth}
+          transparent
+          opacity={edgeOpacity}
+          polygonOffset
+          polygonOffsetFactor={-2}
+          polygonOffsetUnits={-2}
+        />
       </mesh>
       <pointLight ref={flashRef} position={[0, 0, 0]} color={color} intensity={0} />
     </group>
