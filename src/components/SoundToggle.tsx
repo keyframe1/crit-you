@@ -10,8 +10,9 @@ import {
 
 // The control behind the chiptune engine: a speaker that mutes/unmutes the whole
 // sound feature. State lives in lib/sound (localStorage `crit:sound:v1`, default
-// ON) and is read through useSyncExternalStore so the server and the first client
-// paint agree (no hydration flash), then the real stored value settles in.
+// OFF — sound is opt-in) and is read through useSyncExternalStore so the server
+// and the first client paint agree (no hydration flash), then the real stored
+// value settles in.
 //
 // The icon is inline SVG — like the wordmark die — so it carries no icon-pack
 // dependency. Clicking toggles AND primes the AudioContext (toggleSound → set
