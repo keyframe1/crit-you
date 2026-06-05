@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import { Flame } from "lucide-react";
@@ -49,6 +49,25 @@ export default function DailyButton() {
   const [streakStr, playedStr] = snap.split("|");
   const streak = Number(streakStr);
   const played = playedStr === "1";
+
+  // Deep link: arriving at crit.you/?daily=1 (a shared result link) opens the
+  // Daily straight away, so the recipient lands IN today's game rather than
+  // free-play. Done in a post-mount effect (not initial state) so the server and
+  // client hydrate identically; the param is then stripped so refreshes and
+  // back-nav don't keep re-opening it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("daily") !== "1") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot deep-link open after hydration
+    setOpen(true);
+    params.delete("daily");
+    const qs = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash
+    );
+  }, []);
 
   const handleClose = useCallback(() => {
     setOpen(false);

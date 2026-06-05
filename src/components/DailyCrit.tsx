@@ -14,7 +14,7 @@ import {
   AnimatePresence,
   useReducedMotion,
 } from "framer-motion";
-import { Share2, Flame, X } from "lucide-react";
+import { Share2, Copy, Flame, X } from "lucide-react";
 import {
   CAP,
   gameReducer,
@@ -42,7 +42,8 @@ import {
   recordResult,
   getStreakInfo,
 } from "@/lib/dailyStore";
-import { dailyCardBlob, type DailyShareData } from "@/lib/share";
+import { buildDailyShareText, outcomeFor } from "@/lib/dailyShare";
+import { copyText } from "@/lib/clipboard";
 import type { DailyControl } from "@/components/dice3d/dailyControl";
 import ResultNumber from "@/components/ResultNumber";
 import Personality from "@/components/Personality";
@@ -179,56 +180,58 @@ function Countdown() {
   );
 }
 
-// The robust share chain (native sheet → clipboard → download), reused for the
-// daily's spoiler-light card.
-function DailyShareButton({ data }: { data: DailyShareData }) {
+// The daily share: a copyable, spoiler-light TEXT grid (Discord-first). Copy is
+// the primary, universally-supported action so it never greys out; a native
+// TEXT-share is offered as a secondary where the platform supports it. No images,
+// no markdown. (This whole modal is client-only — dynamic ssr:false — so a
+// render-time capability check is hydration-safe.)
+function DailyShareButton({ text }: { text: string }) {
   const [toast, setToast] = useState(false);
+  const ping = () => {
+    setToast(true);
+    setTimeout(() => setToast(false), 2200);
+  };
+
+  const canNativeShare =
+    typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  const handleCopy = async () => {
+    await copyText(text);
+    ping();
+  };
 
   const handleShare = async () => {
-    const blob = await dailyCardBlob(data);
-    if (!blob) return;
-    const file = new File([blob], "crit-daily.png", { type: "image/png" });
-    const caption = data.busted
-      ? `Crit Daily — busted on roll ${data.rollCount}.`
-      : `Crit Daily — banked ${data.score} in ${data.rollCount} rolls.`;
-
-    if (
-      typeof navigator.canShare === "function" &&
-      navigator.canShare({ files: [file] })
-    ) {
+    // Feature-detect at click; fall back to a copy if the sheet isn't there.
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
-        await navigator.share({ files: [file], title: "Crit Daily", text: caption });
+        await navigator.share({ text });
         return;
       } catch {
-        return;
+        return; // user dismissed the sheet
       }
     }
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob }),
-      ]);
-      setToast(true);
-      setTimeout(() => setToast(false), 2000);
-      return;
-    } catch {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "crit-daily.png";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    await copyText(text);
+    ping();
   };
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-2">
       <button
-        onClick={handleShare}
-        className="flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-medium text-white bg-[var(--accent)] hover:opacity-90 transition-opacity"
+        onClick={handleCopy}
+        className="flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white transition-opacity hover:opacity-90"
       >
-        <Share2 size={16} strokeWidth={2} />
-        Share result
+        <Copy size={16} strokeWidth={2} />
+        Copy result
       </button>
+      {canNativeShare && (
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-1.5 rounded-full border border-[var(--ink)]/15 bg-black/[0.03] px-4 py-2.5 text-[14px] font-medium text-[var(--ink)] transition-colors hover:bg-black/[0.06]"
+        >
+          <Share2 size={15} strokeWidth={2} />
+          Share…
+        </button>
+      )}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -236,14 +239,14 @@ function DailyShareButton({ data }: { data: DailyShareData }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] tracking-wide px-3 py-1.5 rounded-lg text-[var(--ink)]"
+            className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg px-3 py-1.5 font-mono text-[11px] tracking-wide text-[var(--ink)]"
             style={{
               background: "#ffffff",
               border: "1px solid rgba(0,0,0,0.08)",
               boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
             }}
           >
-            Copied to clipboard
+            Copied — paste it in Discord.
           </motion.div>
         )}
       </AnimatePresence>
@@ -530,13 +533,17 @@ export default function DailyCrit({ onClose }: Props) {
   // the pre-bust total; banked, it's the banked total. (Unknown in read-only.)
   const decisionTotal = readOnly ? null : game.total;
 
-  const shareData: DailyShareData = {
-    dieType: die,
+  // The spoiler-light text grid for sharing. Streak resolves to the just-recorded
+  // value during a fresh run, or the stored value in the read-only view.
+  const shareStreak = streakNow ?? getStreakInfo().currentStreak;
+  const shareText = buildDailyShareText({
     date: now,
+    faces,
     rollCount: Math.max(1, rollCountForShare),
-    busted,
+    outcome: outcomeFor(busted, rollCountForShare),
     score: finalScore,
-  };
+    streak: shareStreak,
+  });
 
   const showResultsPanel = readOnly || (finished && resultsVisible);
   const atCap = game.rollCount >= CAP;
@@ -727,7 +734,7 @@ export default function DailyCrit({ onClose }: Props) {
               </span>
             </div>
 
-            <DailyShareButton data={shareData} />
+            <DailyShareButton text={shareText} />
 
             {readOnly && (
               <p className="text-center font-mono text-[11px] leading-relaxed text-[var(--mid)]">

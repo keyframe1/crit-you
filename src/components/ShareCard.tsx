@@ -1,70 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { Share2 } from "lucide-react";
+import { Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { shareCardBlob } from "@/lib/share";
+import { copyText } from "@/lib/clipboard";
 import type { Roll } from "@/lib/dice";
 
-// The top-right share button. Renders the current roll to a 1080×1080 card and
-// shares it via the native share sheet (mobile) or copies it to the clipboard
-// (desktop), with a download as a last resort.
+// A low-key secondary affordance for free-play: copy the die's personality line +
+// crit.you as plain text. (The static result-card PNG was retired — a picture of a
+// number added nothing; the animated roll WebM is the only image worth shipping,
+// and that's a separate build.)
 export default function ShareCard({ roll }: { roll: Roll | null }) {
   const [toast, setToast] = useState(false);
 
-  const showToast = () => {
+  const handleCopy = async () => {
+    if (!roll) return;
+    await copyText(`${roll.line}\n\ncrit.you`);
     setToast(true);
     setTimeout(() => setToast(false), 2000);
-  };
-
-  const handleShare = async () => {
-    if (!roll) return;
-    const blob = await shareCardBlob(roll);
-    if (!blob) return;
-    const file = new File([blob], "crit.png", { type: "image/png" });
-
-    // Native share (mobile), if it can handle files.
-    if (
-      typeof navigator.canShare === "function" &&
-      navigator.canShare({ files: [file] })
-    ) {
-      try {
-        await navigator.share({ files: [file], title: "Crit", text: roll.line });
-        return;
-      } catch {
-        // User dismissed the share sheet — nothing more to do.
-        return;
-      }
-    }
-
-    // Desktop fallback: copy the image to the clipboard.
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob }),
-      ]);
-      showToast();
-      return;
-    } catch {
-      // Last resort: download the PNG.
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "crit.png";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
   };
 
   return (
     <>
       <button
-        onClick={handleShare}
+        onClick={handleCopy}
         disabled={!roll}
-        aria-label="Share roll"
+        aria-label="Copy roll line"
         className="flex items-center gap-1.5 rounded-[20px] px-[14px] py-1.5 text-[13px] font-medium text-[var(--ink)] bg-black/5 hover:bg-black/[0.08] transition-colors duration-200 disabled:opacity-30 disabled:bg-black/5 disabled:cursor-default"
       >
-        <Share2 size={15} strokeWidth={2} />
-        <span className="hidden sm:inline tracking-wide">Share</span>
+        <Copy size={15} strokeWidth={2} />
+        <span className="hidden sm:inline tracking-wide">Copy</span>
       </button>
 
       <AnimatePresence>
