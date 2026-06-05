@@ -47,6 +47,18 @@ import { copyText } from "@/lib/clipboard";
 import type { DailyControl } from "@/components/dice3d/dailyControl";
 import ResultNumber from "@/components/ResultNumber";
 import Personality from "@/components/Personality";
+import SoundToggle from "@/components/SoundToggle";
+import {
+  playBank,
+  playClack,
+  playFlourish,
+  playRollResult,
+  primeAudio,
+  tierForDie,
+} from "@/lib/sound";
+
+// Streak milestones worth the big triumphant flourish (and an extra visual beat).
+const MILESTONES = new Set([7, 30, 100]);
 
 // The 3D stage is client-only + heavy; code-split it exactly like the main page.
 const DiceCanvas = dynamic(() => import("@/components/DiceCanvas"), {
@@ -324,6 +336,122 @@ function OddsReadout({
   );
 }
 
+// The streak readout, but as a deliberate BEAT rather than a silent number: when
+// the results panel reveals, the flame pops/grows, the new streak number rolls up
+// into place, and a few sparkles flick off the flame. A milestone (7/30/100) pops
+// harder and rings — the visual partner to the flourish that plays at finish. A
+// bust shows a quiet "reset" with none of the celebration.
+const SPARK_ANGLES = [-60, -25, 15, 55, 100];
+
+function StreakBeat({
+  streak,
+  busted,
+  milestone,
+  reduce,
+}: {
+  streak: number;
+  busted: boolean;
+  milestone: boolean;
+  reduce: boolean | null;
+}) {
+  const celebrate = streak > 0 && !busted;
+  const flameColor = celebrate ? "var(--accent)" : "var(--light)";
+
+  return (
+    <div className="relative flex items-center gap-2">
+      {/* The flame: a spring pop, larger + ringed on a milestone. */}
+      <motion.span
+        className="relative inline-flex"
+        initial={reduce ? false : { scale: 0.4, rotate: -14 }}
+        animate={{
+          scale: celebrate ? (milestone ? [1, 1.55, 1.1] : [1, 1.3, 1]) : 1,
+          rotate: 0,
+        }}
+        transition={{
+          duration: reduce ? 0 : 0.6,
+          ease: "easeOut",
+          times: celebrate ? [0, 0.5, 1] : undefined,
+        }}
+      >
+        {milestone && !reduce && (
+          <motion.span
+            aria-hidden
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ width: 18, height: 18, border: "2px solid var(--accent)" }}
+            initial={{ scale: 0.5, opacity: 0.7 }}
+            animate={{ scale: 2.6, opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          />
+        )}
+        <Flame
+          size={milestone ? 19 : 16}
+          strokeWidth={2}
+          style={{ color: flameColor }}
+        />
+        {/* Sparkles flick off the flame on a successful streak. */}
+        {celebrate &&
+          !reduce &&
+          SPARK_ANGLES.map((deg, i) => {
+            const rad = (deg * Math.PI) / 180;
+            const dist = milestone ? 22 : 16;
+            return (
+              <motion.span
+                key={i}
+                aria-hidden
+                className="absolute left-1/2 top-1/2 rounded-full"
+                style={{ width: 3, height: 3, background: "var(--accent)" }}
+                initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+                animate={{
+                  x: Math.cos(rad) * dist,
+                  y: Math.sin(rad) * dist,
+                  scale: [0, 1, 0],
+                  opacity: [0, 1, 0],
+                }}
+                transition={{
+                  duration: 0.6,
+                  delay: 0.1 + i * 0.03,
+                  ease: "easeOut",
+                }}
+              />
+            );
+          })}
+      </motion.span>
+
+      <span className="font-mono text-[12px] text-[var(--ink)]">
+        {celebrate ? (
+          <>
+            {/* The number rolls up into place. */}
+            <span
+              className="relative inline-flex overflow-hidden align-text-bottom"
+              style={{ height: "1.1em" }}
+            >
+              <motion.span
+                key={streak}
+                className="tabular-nums font-bold"
+                initial={reduce ? false : { y: "1em", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{
+                  delay: reduce ? 0 : 0.18,
+                  duration: reduce ? 0 : 0.4,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                style={{ color: milestone ? "var(--accent)" : undefined }}
+              >
+                {streak}
+              </motion.span>
+            </span>
+            -day streak{milestone ? " — milestone!" : ""}
+          </>
+        ) : busted ? (
+          "Streak reset"
+        ) : (
+          "No streak yet"
+        )}
+      </span>
+    </div>
+  );
+}
+
 // ─── The modal ───────────────────────────────────────────────────────────────
 
 export default function DailyCrit({ onClose }: Props) {
@@ -334,6 +462,8 @@ export default function DailyCrit({ onClose }: Props) {
   const todayYmd = useMemo(() => ymdUTC(now), [now]);
   const die = useMemo(() => getDailyDie(now), [now]);
   const faces = maxFor(die);
+  // The day's die drives the chiptune fidelity for the whole run.
+  const tier = tierForDie(die);
   const sequence = useMemo(() => getDailySequence(now, die), [now, die]);
 
   // Already-played check is taken once on open — the scarcity gate.
@@ -388,7 +518,8 @@ export default function DailyCrit({ onClose }: Props) {
   const handleRollStart = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setNumberVisible(false);
-  }, []);
+    playClack(tier); // the clack — the die leaving the hand
+  }, [tier]);
 
   // Fired when the die lands on its (forced) value: commit to the reducer, raise
   // the result number, and set the decision-snark bubble.
@@ -406,14 +537,20 @@ export default function DailyCrit({ onClose }: Props) {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setNumberVisible(false), 2150);
 
+      // Per-roll landing sound: a 1 busts (womp), a faces nat-max flourishes, a
+      // near-crit sparkles, anything else just ticks. The bigger bank-outcome
+      // flourish (perfect run / streak milestone) is handled at finish below.
+      playRollResult(tier, value, faces);
+
       dispatch({ type: "ROLL", value });
       rollingRef.current = false;
       setRolling(false);
     },
-    [die, faces]
+    [die, faces, tier]
   );
 
   const handleRoll = useCallback(() => {
+    primeAudio(); // unlock audio on the literal button gesture
     const g = gameRef.current;
     if (rollingRef.current || g.status !== "idle" || g.rollCount >= CAP) return;
     pendingValueRef.current = sequence[g.rollCount];
@@ -423,6 +560,7 @@ export default function DailyCrit({ onClose }: Props) {
   }, [sequence]);
 
   const handleBank = useCallback(() => {
+    primeAudio(); // unlock audio on the literal button gesture
     const g = gameRef.current;
     if (rollingRef.current || g.status !== "idle" || g.rollCount < 1) return;
     const line = pickDailyLine({ kind: "bank", rollCount: g.rollCount });
@@ -454,9 +592,19 @@ export default function DailyCrit({ onClose }: Props) {
       busted,
     });
     setStreakNow(updated.currentStreak);
+    // Finish sound. A bust already womped on its landing roll, so it stays quiet
+    // here. A clean bank chimes; a perfect run (survived all CAP rolls) or a
+    // streak milestone earns the full flourish instead — which, per spec,
+    // suppresses the plain bank chime so the two never stack.
+    if (!busted) {
+      const perfect = game.rolls.length >= CAP;
+      const milestone = MILESTONES.has(updated.currentStreak);
+      if (perfect || milestone) playFlourish(tier);
+      else playBank(tier);
+    }
     const t = setTimeout(() => setResultsVisible(true), reduce ? 0 : 850);
     return () => clearTimeout(t);
-  }, [readOnly, game, todayYmd, die, reduce]);
+  }, [readOnly, game, todayYmd, die, reduce, tier]);
 
   useEffect(
     () => () => {
@@ -549,6 +697,13 @@ export default function DailyCrit({ onClose }: Props) {
   const atCap = game.rollCount >= CAP;
   const liveEv = evOfRoll(faces, game.total);
 
+  // A "perfect" run survived all CAP rolls before banking (never busted) — the
+  // daily's equivalent of a crit. It gets a distinct visual beat (plus the
+  // flourish) so it reads bigger than a normal bank. A milestone streak likewise
+  // pops harder in the streak readout.
+  const isPerfect = !busted && rollCountForShare >= CAP;
+  const milestoneHit = !busted && MILESTONES.has(shareStreak);
+
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
@@ -590,13 +745,16 @@ export default function DailyCrit({ onClose }: Props) {
               {labelFor(die)} · {dateLabel}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close daily"
-            className="-m-2 rounded-full p-2 text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
-          >
-            <X size={18} strokeWidth={2} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <SoundToggle size={15} />
+            <button
+              onClick={onClose}
+              aria-label="Close daily"
+              className="-m-2 rounded-full p-2 text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
+            >
+              <X size={18} strokeWidth={2} />
+            </button>
+          </div>
         </div>
 
         {/* Die stage — relative so the bubble + number overlay anchor to it. */}
@@ -699,40 +857,68 @@ export default function DailyCrit({ onClose }: Props) {
             transition={{ duration: reduce ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="-mt-2 flex flex-col items-center gap-4"
           >
-            <div className="text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--mid)]">
-                {busted ? "Busted" : "Banked"}
-              </p>
+            <div className="relative text-center">
+              {/* Perfect-run burst — a warm gold bloom behind the score. */}
+              {isPerfect && !reduce && (
+                <motion.div
+                  aria-hidden
+                  className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                  style={{
+                    width: 110,
+                    height: 110,
+                    background:
+                      "radial-gradient(circle, rgba(255,210,110,0.45), transparent 70%)",
+                  }}
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: [0.4, 1.4, 1.15], opacity: [0, 0.9, 0] }}
+                  transition={{ duration: 0.9, ease: "easeOut" }}
+                />
+              )}
               <p
-                className="font-sans text-[52px] font-black leading-none tabular-nums"
-                style={{ color: busted ? "var(--mid)" : "var(--ink)" }}
+                className="font-mono text-[10px] uppercase tracking-[0.18em]"
+                style={{ color: isPerfect ? "var(--accent)" : "var(--mid)" }}
+              >
+                {busted ? "Busted" : isPerfect ? "★ Perfect run ★" : "Banked"}
+              </p>
+              <motion.p
+                className="relative font-sans text-[52px] font-black leading-none tabular-nums"
+                style={{
+                  color: busted
+                    ? "var(--mid)"
+                    : isPerfect
+                    ? "var(--accent)"
+                    : "var(--ink)",
+                  textShadow: isPerfect
+                    ? "0 0 20px rgba(255,210,110,0.6)"
+                    : undefined,
+                }}
+                initial={reduce || !isPerfect ? false : { scale: 0.6 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 360,
+                  damping: 15,
+                  delay: 0.05,
+                }}
               >
                 {finalScore}
-              </p>
+              </motion.p>
             </div>
 
             <RunRow die={die} rolls={runRolls} busted={busted} />
 
             <OddsReadout faces={faces} decisionTotal={decisionTotal} />
 
-            {/* Streak */}
-            <div className="flex items-center gap-2">
-              <Flame
-                size={16}
-                strokeWidth={2}
-                style={{ color: busted ? "var(--light)" : "var(--accent)" }}
-              />
-              <span className="font-mono text-[12px] text-[var(--ink)]">
-                {(() => {
-                  const s = streakNow ?? getStreakInfo().currentStreak;
-                  return s > 0
-                    ? `${s}-day streak`
-                    : busted
-                    ? "Streak reset"
-                    : "No streak yet";
-                })()}
-              </span>
-            </div>
+            {/* Streak — a deliberate beat: the flame pops, the number rolls up,
+                sparkles flick off, and a milestone rings. (Keyed by the streak
+                value so it replays its entry if the value settles in.) */}
+            <StreakBeat
+              key={shareStreak}
+              streak={shareStreak}
+              busted={busted}
+              milestone={milestoneHit}
+              reduce={reduce}
+            />
 
             <DailyShareButton text={shareText} />
 

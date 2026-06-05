@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { DieType, Roll } from "@/lib/dice";
+import { isHighRoll, type DieType, type Roll } from "@/lib/dice";
 
 // Per-die styling for the result number. Every number is bold (800) white text
 // with a crisp 4-directional outline in the die's dark signature colour, so it
@@ -16,6 +16,9 @@ const SANS = "var(--font-geist-sans)";
 const SIZE = "clamp(32px, 8vw, 44px)";
 // The warm glow layer every die's number gains on a natural max.
 const MAX_GLOW = "0 0 16px rgba(255,220,100,0.5)";
+// A lighter version of that warm glow for a "high roll" (top of the range, short
+// of a nat-max) — the visual half of the near-crit sparkle. Tasteful, not a crit.
+const HIGH_GLOW = "0 0 10px rgba(255,225,150,0.35)";
 
 interface NumConfig {
   font: string;
@@ -57,16 +60,20 @@ function outline(c: string): string {
 function getNumberStyle(dieType: DieType, result: number, max: number): CSSProperties {
   const isMax = result === max;
   const isMin = result === 1;
+  const isHigh = isHighRoll(result, max);
   const cfg = NUM[dieType] ?? NUM.d20;
   const ol = outline(cfg.outlineColor);
 
   // nat 1: outline only (no glow, no depth) — diminished. nat max: outline +
-  // every glow this die carries + the warm crit glow + depth. otherwise: outline
-  // + the die's signature glow (if any) + depth.
+  // every glow this die carries + the warm crit glow + depth. high roll: outline
+  // + a light warm glow + depth. otherwise: outline + the die's signature glow
+  // (if any) + depth.
   const textShadow = isMin
     ? ol
     : isMax
     ? [ol, cfg.glow, cfg.maxGlow, MAX_GLOW, cfg.depth].filter(Boolean).join(", ")
+    : isHigh
+    ? [ol, cfg.glow, HIGH_GLOW, cfg.depth].filter(Boolean).join(", ")
     : [ol, cfg.glow, cfg.depth].filter(Boolean).join(", ");
 
   return {

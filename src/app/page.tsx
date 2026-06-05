@@ -7,8 +7,15 @@ import DiceSelector from "@/components/DiceSelector";
 import ShareCard from "@/components/ShareCard";
 import ResultNumber from "@/components/ResultNumber";
 import DailyButton from "@/components/DailyButton";
+import SoundToggle from "@/components/SoundToggle";
 import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
 import { pickLine } from "@/lib/lines";
+import {
+  playClack,
+  playRollResult,
+  primeAudio,
+  tierForDie,
+} from "@/lib/sound";
 
 // The Three.js stage is client-only (WebGL needs the browser) and heavy, so it's
 // code-split out of the initial bundle. `ssr: false` is allowed here because
@@ -44,17 +51,23 @@ export default function Home() {
       setNumberVisible(true);
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setNumberVisible(false), 2150);
+      // The landed value is the payoff: a settle tick, a flourish on a nat-max
+      // (over the die's own celebration), a sparkle on a near-crit. Tier = the
+      // selected die.
+      playRollResult(tierForDie(dieType), value, max);
     },
     [dieType]
   );
 
   // The die signals when a fresh roll begins (the tumble); clear the previous
   // result number so it doesn't hang over the die while it rolls. The bubble is
-  // intentionally left up until the new value lands.
+  // intentionally left up until the new value lands. This is also the "clack" —
+  // the die leaving the hand.
   const handleRollStart = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setNumberVisible(false);
-  }, []);
+    playClack(tierForDie(dieType));
+  }, [dieType]);
 
   // Switching dice clears the stale result so the line doesn't outlive the die
   // it belonged to.
@@ -100,6 +113,7 @@ export default function Home() {
           </span>
         </button>
         <div className="flex items-center gap-2">
+          <SoundToggle />
           <DailyButton />
           <ShareCard roll={roll} />
         </div>
@@ -108,7 +122,13 @@ export default function Home() {
       {/* Die area. `relative` so the speech bubble can float ABSOLUTELY above the
           die without being in the flex flow — a multi-line bubble must never push
           the canvas down (the old layout shift, worst on mobile). */}
-      <div className="relative flex-1 min-h-0 flex flex-col items-center justify-center">
+      <div
+        className="relative flex-1 min-h-0 flex flex-col items-center justify-center"
+        // Unlock the AudioContext on the literal tap that starts a roll, so the
+        // first clack is allowed under the browser's autoplay policy.
+        onPointerDown={() => primeAudio()}
+      >
+
         {/* Speech bubble — absolute, centred, click-through. Its height never
             affects the die's position. */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-full flex justify-center px-4 pointer-events-none">

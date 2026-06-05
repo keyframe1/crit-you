@@ -55,6 +55,15 @@ export function isNatMin(roll: Roll): boolean {
   return roll.value <= 1;
 }
 
+// A "high roll" — the top of the range, but short of a natural max. Used to give
+// near-crits a lighter beat (a brighter blip + a soft number glow) than a nat-max,
+// without firing on every above-average roll. Small dice (d4/d6/d8) have no band
+// here — their ceil(0.9·max) already equals the max — so only the bigger dice get
+// the "so close" treatment.
+export function isHighRoll(value: number, max: number): boolean {
+  return value < max && value >= Math.ceil(max * 0.9);
+}
+
 // SVG geometry, authored in a 160×160 viewBox centred on (80,80). This is a
 // WIREFRAME-FIRST model (matching the reroll d20): every die is drawn in two
 // layers —
