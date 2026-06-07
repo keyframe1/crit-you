@@ -37,6 +37,9 @@ interface Props {
   // CSS size override for the square stage (the daily uses a smaller die in its
   // modal). Defaults to the full-page clamp.
   size?: string;
+  // Fired once the WebGL renderer/scene is created — the cold-open loader waits
+  // on this so it never reveals a half-built canvas. Only the main page uses it.
+  onReady?: () => void;
 }
 
 // Pick the 3D component for the selected die. Dice render only their 3D mesh and
@@ -179,6 +182,7 @@ export default function DiceCanvas({
   interactive = true,
   control,
   size = "clamp(280px, min(82vmin, 62vh), 560px)",
+  onReady,
 }: Props) {
   // Clicking anywhere in the stage bumps this; the die component watches it and
   // rolls (guarding against re-rolls mid-animation itself). In controlled mode
@@ -261,6 +265,7 @@ export default function DiceCanvas({
         dpr={[1, 2]}
         camera={{ position: [0, 1.5, 5], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
+        onCreated={() => onReady?.()}
       >
         {/* Warm ambient base matched to the cream page. */}
         <ambientLight intensity={0.5} color="#f5f3ee" />

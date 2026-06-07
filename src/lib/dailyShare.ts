@@ -51,7 +51,9 @@ function outcomeText(outcome: DailyOutcome, score: number): string {
     case "perfect":
       return `PERFECT · ${score}`;
     case "bust":
-      return `busted · kept ${score}`;
+      // A bust zeroes the run's points AND breaks the streak, so there's no score
+      // and no 🔥 to show — the bead row + 💥 already tells the story.
+      return `busted`;
     default:
       return `banked ${score}`;
   }
@@ -66,7 +68,9 @@ export function outcomeFor(busted: boolean, rollCount: number): DailyOutcome {
 
 export function buildDailyShareText(r: DailyShareResult): string {
   const line1 = `Crit · ${monthDay(r.date)} · d${r.faces}`;
-  const streakSuffix = r.streak > 0 ? ` · 🔥${r.streak}` : "";
+  // No streak suffix on a bust — the streak just died (and it's already 0).
+  const streakSuffix =
+    r.outcome !== "bust" && r.streak > 0 ? ` · 🔥${r.streak}` : "";
   const line2 = `${beadRun(r.rollCount, r.outcome)} ${outcomeText(
     r.outcome,
     r.score

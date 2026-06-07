@@ -9,6 +9,32 @@ import type { DieType } from "@/lib/dice";
 const KEY = "crit:daily:v1";
 const HISTORY_CAP = 60; // keep the last ~2 months of runs
 
+// Separate one-shot flag for the first-open Pip rules walkthrough. Its own key so
+// it's independent of the run record (clearing a stuck run never re-triggers it).
+const ONBOARD_KEY = "crit:onboarded:daily:v1";
+
+// Has the player already seen the Daily walkthrough? SSR / unavailable storage
+// returns true so the coachmark never flashes during prerender or in private mode
+// where we couldn't record that it was dismissed.
+export function hasOnboardedDaily(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(ONBOARD_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+// Mark the walkthrough seen (set once it's completed or skipped).
+export function setOnboardedDaily(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ONBOARD_KEY, "1");
+  } catch {
+    // Private mode / storage full: the walkthrough just may show again next time.
+  }
+}
+
 export interface DailyHistoryEntry {
   date: string; // UTC "YYYY-MM-DD"
   dieType: DieType;

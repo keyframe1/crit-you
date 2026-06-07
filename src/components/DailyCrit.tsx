@@ -14,7 +14,7 @@ import {
   AnimatePresence,
   useReducedMotion,
 } from "framer-motion";
-import { Share2, Copy, Flame, X } from "lucide-react";
+import { Share2, Copy, Flame, X, HelpCircle } from "lucide-react";
 import {
   CAP,
   gameReducer,
@@ -27,20 +27,15 @@ import {
   breakEvenTotal,
   avgSurvivor,
 } from "@/lib/daily";
-import {
-  maxFor,
-  labelFor,
-  animFor,
-  SHAPES,
-  type DieType,
-  type Roll,
-} from "@/lib/dice";
+import { maxFor, labelFor, type DieType, type Roll } from "@/lib/dice";
 import { pickDailyLine } from "@/lib/dailyLines";
 import {
   hasPlayedToday,
   getTodayResult,
   recordResult,
   getStreakInfo,
+  hasOnboardedDaily,
+  setOnboardedDaily,
 } from "@/lib/dailyStore";
 import { buildDailyShareText, outcomeFor } from "@/lib/dailyShare";
 import { copyText } from "@/lib/clipboard";
@@ -48,6 +43,8 @@ import type { DailyControl } from "@/components/dice3d/dailyControl";
 import ResultNumber from "@/components/ResultNumber";
 import Personality from "@/components/Personality";
 import SoundToggle from "@/components/SoundToggle";
+import DieGlyph from "@/components/DieGlyph";
+import DailyWalkthrough from "@/components/DailyWalkthrough";
 import {
   playBank,
   playClack,
@@ -70,49 +67,6 @@ interface Props {
 }
 
 // ─── Small reusable bits ─────────────────────────────────────────────────────
-
-// A tiny wireframe die glyph (reuses SHAPES) for the per-roll history row.
-function DieGlyph({ die, dim }: { die: DieType; dim?: boolean }) {
-  const shape = SHAPES[die];
-  const color = animFor(die).color;
-  return (
-    <svg
-      viewBox="0 0 160 160"
-      className="h-full w-full"
-      style={{ overflow: "visible", opacity: dim ? 0.5 : 1 }}
-      aria-hidden
-    >
-      {shape.fills.map((f, i) => (
-        <polygon
-          key={`f${i}`}
-          points={f.points}
-          fill={color}
-          fillOpacity={f.opacity}
-          stroke="none"
-        />
-      ))}
-      {shape.wireLines.map(([x1, y1, x2, y2], i) => (
-        <line
-          key={`w${i}`}
-          x1={x1}
-          y1={y1}
-          x2={x2}
-          y2={y2}
-          stroke="#1a1a18"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-      ))}
-      <polygon
-        points={shape.outline}
-        fill="none"
-        stroke="#1a1a18"
-        strokeWidth={4}
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 // The CAP-slot run history: a filled glyph per roll (a 💥 on the busting roll),
 // faint empty slots for the rolls not yet taken. Shows the running shape of the
@@ -457,6 +411,20 @@ function StreakBeat({
 export default function DailyCrit({ onClose }: Props) {
   const reduce = useReducedMotion();
 
+  // Pip's rules walkthrough: auto-runs on the first-ever Daily open (flag-gated),
+  // and is replayable any time from the "?" in the header.
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  useEffect(() => {
+    if (hasOnboardedDaily()) return;
+    const t = setTimeout(() => setShowWalkthrough(true), reduce ? 0 : 450);
+    return () => clearTimeout(t);
+  }, [reduce]);
+  const dismissWalkthrough = useCallback(() => {
+    setOnboardedDaily();
+    setShowWalkthrough(false);
+  }, []);
+  const replayWalkthrough = useCallback(() => setShowWalkthrough(true), []);
+
   // Pin "now" for this run so the seed, die, and date stay stable across renders.
   const now = useMemo(() => new Date(), []);
   const todayYmd = useMemo(() => ymdUTC(now), [now]);
@@ -746,6 +714,13 @@ export default function DailyCrit({ onClose }: Props) {
             </span>
           </div>
           <div className="flex items-center gap-0.5">
+            <button
+              onClick={replayWalkthrough}
+              aria-label="How the Daily works"
+              className="-m-1 rounded-full p-2 text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
+            >
+              <HelpCircle size={16} strokeWidth={2} />
+            </button>
             <SoundToggle size={15} />
             <button
               onClick={onClose}
@@ -933,6 +908,13 @@ export default function DailyCrit({ onClose }: Props) {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Pip's rules walkthrough — overlays the whole daily on first open. */}
+      <AnimatePresence>
+        {showWalkthrough && (
+          <DailyWalkthrough die={die} onDone={dismissWalkthrough} />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

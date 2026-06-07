@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { AnimatePresence } from "framer-motion";
 import Personality from "@/components/Personality";
 import DiceSelector from "@/components/DiceSelector";
 import ShareCard from "@/components/ShareCard";
 import ResultNumber from "@/components/ResultNumber";
 import DailyButton from "@/components/DailyButton";
 import SoundToggle from "@/components/SoundToggle";
+import BrandedLoader from "@/components/BrandedLoader";
 import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
 import { pickLine } from "@/lib/lines";
 import {
@@ -33,6 +35,33 @@ export default function Home() {
   const [numberVisible, setNumberVisible] = useState(false);
   const rollId = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Cold-open readiness: hold the branded loader until the 3D scene is created
+  // and webfonts have settled, so the first paint is intentional. A short floor
+  // keeps the brand from flickering when everything is instant; a hard ceiling
+  // guarantees we never trap the user behind the loader if WebGL stalls. ──
+  const [sceneReady, setSceneReady] = useState(false);
+  const [fontsReady, setFontsReady] = useState(false);
+  const [minTimeUp, setMinTimeUp] = useState(false);
+  const [forceReady, setForceReady] = useState(false);
+  const handleSceneReady = useCallback(() => setSceneReady(true), []);
+
+  useEffect(() => {
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    // Resolve through a promise either way (no API → already-resolved promise),
+    // so the flag is only ever set from an async callback, never synchronously.
+    (fonts?.ready ?? Promise.resolve())
+      .then(() => setFontsReady(true))
+      .catch(() => setFontsReady(true));
+    const minT = setTimeout(() => setMinTimeUp(true), 650);
+    const maxT = setTimeout(() => setForceReady(true), 3000);
+    return () => {
+      clearTimeout(minT);
+      clearTimeout(maxT);
+    };
+  }, []);
+
+  const appReady = forceReady || (sceneReady && fontsReady && minTimeUp);
 
   // The die reports its rolled value once it has landed; we own the line choice
   // so the displayed personality text and the share card always agree. Showing
@@ -83,7 +112,11 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex flex-col h-[100dvh] overflow-hidden select-none">
+    <>
+      <AnimatePresence>
+        {!appReady && <BrandedLoader key="cold-open-loader" />}
+      </AnimatePresence>
+      <main className="flex flex-col h-[100dvh] overflow-hidden select-none">
       <header className="flex items-center justify-between px-5 py-4 shrink-0">
         {/* Wordmark doubles as a reset: click returns to the d20 and clears the
             current roll. The little die spins on hover. */}
@@ -135,7 +168,12 @@ export default function Home() {
           <Personality roll={roll} />
         </div>
         {/* Every die is a real 3D object on the shared Three.js stage. */}
-        <DiceCanvas dieType={dieType} onRoll={handleRoll} onRollStart={handleRollStart} />
+        <DiceCanvas
+          dieType={dieType}
+          onRoll={handleRoll}
+          onRollStart={handleRollStart}
+          onReady={handleSceneReady}
+        />
         {/* The result number is a plain CSS overlay centred over the canvas — a
             sibling of the 3D scene, never rendered inside it. It's a div centred
             on a div, so it can't drift off-side, z-fight, or land on an edge. */}
@@ -152,6 +190,7 @@ export default function Home() {
           </span>
         </footer>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
