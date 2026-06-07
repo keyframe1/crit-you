@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
+import gsap from "gsap";
 import { type DieType } from "@/lib/dice";
+import { usePrefersReducedMotion } from "@/lib/useReducedMotion";
 import { DailyControlContext, type DailyControl } from "./dice3d/dailyControl";
 import D4 from "./dice3d/D4";
 import D6 from "./dice3d/D6";
@@ -72,6 +75,100 @@ function Die3D({
   }
 }
 
+// ─── Die-swap transition ─────────────────────────────────────────────────────
+// Switching dice is not a hard cut: the outgoing die shrinks + spins away as the
+// stage fades out, then the incoming die springs in as it fades back. Timings in
+// ms; reduced motion collapses both to a plain opacity fade (no scale/spin).
+type SwapPhase = "idle" | "out" | "in";
+const SWAP_OUT_MS = 150;
+const SWAP_IN_MS = 300;
+const REDUCE_FADE_MS = 120;
+
+// Wraps the shown die in a group we animate as a unit so a swap reads as
+// dissolve-out / materialize-in. The inner die is keyed by `shownType`, so it
+// still remounts fresh per die (each die's animation state resets, as before).
+// The wrapper transform is pure presentation — it never touches the die's own
+// roll/idle animations, which live on the die's child group; and rolls are gated
+// until the swap is at rest (see handleClick), so the face-forward settle always
+// runs with the wrapper at identity.
+function DieStage({
+  shownType,
+  phase,
+  reduce,
+  rollNonce,
+  onResult,
+  onRollStart,
+}: {
+  shownType: DieType;
+  phase: SwapPhase;
+  reduce: boolean;
+  rollNonce: number;
+  onResult: (value: number) => void;
+  onRollStart?: () => void;
+}) {
+  const wrapRef = useRef<THREE.Group>(null);
+  const firstMount = useRef(true);
+
+  // Exit: shrink + spin the outgoing wrapper away. The fade itself is the stage
+  // opacity (the cream page shows through the alpha canvas), so this only carries
+  // the motion. Skipped under reduced motion.
+  useEffect(() => {
+    const g = wrapRef.current;
+    if (!g || phase !== "out" || reduce) return;
+    gsap.killTweensOf(g.scale);
+    gsap.killTweensOf(g.rotation);
+    gsap.to(g.scale, { x: 0.55, y: 0.55, z: 0.55, duration: SWAP_OUT_MS / 1000, ease: "power2.in" });
+    gsap.to(g.rotation, { y: g.rotation.y + Math.PI * 0.75, duration: SWAP_OUT_MS / 1000, ease: "power2.in" });
+  }, [phase, reduce]);
+
+  // Enter: when the shown die changes, spring the new one in from a small,
+  // slightly-turned pose. Set synchronously (layout effect) so the very first
+  // frame is already at the start pose — and it's under the faded-out stage
+  // anyway. Skipped on the first mount (page load is not a swap).
+  useLayoutEffect(() => {
+    const g = wrapRef.current;
+    if (!g) return;
+    if (firstMount.current) {
+      firstMount.current = false;
+      return;
+    }
+    gsap.killTweensOf(g.scale);
+    gsap.killTweensOf(g.rotation);
+    if (reduce) {
+      g.scale.set(1, 1, 1);
+      g.rotation.set(0, 0, 0);
+      return;
+    }
+    g.scale.set(0.7, 0.7, 0.7);
+    g.rotation.set(0, -0.5, 0);
+    gsap.to(g.scale, { x: 1, y: 1, z: 1, duration: SWAP_IN_MS / 1000, ease: "back.out(1.7)" });
+    gsap.to(g.rotation, { y: 0, duration: SWAP_IN_MS / 1000, ease: "back.out(1.5)" });
+  }, [shownType, reduce]);
+
+  useEffect(
+    () => () => {
+      const g = wrapRef.current;
+      if (g) {
+        gsap.killTweensOf(g.scale);
+        gsap.killTweensOf(g.rotation);
+      }
+    },
+    []
+  );
+
+  return (
+    <group ref={wrapRef}>
+      <Die3D
+        key={shownType}
+        dieType={shownType}
+        rollNonce={rollNonce}
+        onResult={onResult}
+        onRollStart={onRollStart}
+      />
+    </group>
+  );
+}
+
 // The shared Three.js stage: one Canvas, lighting, and a shadow-catching floor,
 // hosting whichever die is selected.
 export default function DiceCanvas({
@@ -90,10 +187,46 @@ export default function DiceCanvas({
   const controlled = controlledNonce !== undefined;
   const rollNonce = controlled ? controlledNonce : internalNonce;
 
+  const reduce = usePrefersReducedMotion();
+
+  // Die-swap transition state. `shownType` is the die actually mounted; it lags
+  // the requested `dieType` by the exit duration so the outgoing die can animate
+  // away first. `shownRef` mirrors it for the effect's comparison so the effect
+  // depends only on the incoming `dieType` (not on its own swap), keeping the
+  // phase timeline from being torn down mid-flight.
+  const [shownType, setShownType] = useState(dieType);
+  const [phase, setPhase] = useState<SwapPhase>("idle");
+  const shownRef = useRef(dieType);
+
+  useEffect(() => {
+    if (dieType === shownRef.current) return;
+    const outMs = reduce ? REDUCE_FADE_MS : SWAP_OUT_MS;
+    const inMs = reduce ? REDUCE_FADE_MS : SWAP_IN_MS;
+    setPhase("out");
+    const swap = setTimeout(() => {
+      shownRef.current = dieType;
+      setShownType(dieType);
+      setPhase("in");
+    }, outMs);
+    const done = setTimeout(() => setPhase("idle"), outMs + inMs);
+    return () => {
+      clearTimeout(swap);
+      clearTimeout(done);
+    };
+  }, [dieType, reduce]);
+
   const handleClick = useCallback(() => {
-    if (controlled || !interactive) return;
+    // Don't roll during a swap — the wrapper isn't at identity yet, so the
+    // face-forward settle would aim at a tilted die.
+    if (controlled || !interactive || phase !== "idle") return;
     setInternalNonce((n) => n + 1);
-  }, [controlled, interactive]);
+  }, [controlled, interactive, phase]);
+
+  // The stage fades with the swap (the alpha canvas reveals the cream page). One
+  // opacity for both phases: 0 while the outgoing die leaves, 1 otherwise; the
+  // duration follows whichever phase is active.
+  const stageOpacity = phase === "out" ? 0 : 1;
+  const fadeMs = reduce ? REDUCE_FADE_MS : phase === "out" ? SWAP_OUT_MS : SWAP_IN_MS;
 
   return (
     <div
@@ -109,6 +242,10 @@ export default function DiceCanvas({
         // so it never crowds out the bubble above or the selector below.
         width: size,
         height: size,
+        // Cross-fade the stage across a die swap (and the reduced-motion path's
+        // only transition).
+        opacity: stageOpacity,
+        transition: `opacity ${fadeMs}ms ease-out`,
       }}
     >
       <Canvas
@@ -194,13 +331,16 @@ export default function DiceCanvas({
           <shadowMaterial transparent opacity={0.16} />
         </mesh>
 
-        {/* Remounts on die change so each die's animation state starts fresh.
-            The control provider lives INSIDE the Canvas so PolyDie reads it
-            within the same react-three-fiber reconciler (no context bridge). */}
+        {/* DieStage wraps the die in an animated group for the swap transition
+            and keys the inner die by `shownType`, so each die's animation state
+            still starts fresh on change. The control provider lives INSIDE the
+            Canvas so PolyDie reads it within the same react-three-fiber reconciler
+            (no context bridge). */}
         <DailyControlContext.Provider value={control ?? null}>
-          <Die3D
-            key={dieType}
-            dieType={dieType}
+          <DieStage
+            shownType={shownType}
+            phase={phase}
+            reduce={reduce}
             rollNonce={rollNonce}
             onResult={onRoll}
             onRollStart={onRollStart}

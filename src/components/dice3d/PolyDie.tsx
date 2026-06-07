@@ -10,6 +10,7 @@ import { useIdleFloat } from "./useIdleFloat";
 import { faceForwardQuaternion, uniqueFaceNormals } from "./faceForward";
 import type { DieReaction } from "./reactions";
 import { DailyControlContext } from "./dailyControl";
+import { usePrefersReducedMotion } from "@/lib/useReducedMotion";
 
 export interface PolyDieConfig {
   color: string; // signature colour: faces, edge flash, point light
@@ -110,6 +111,15 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
   const controlRef = useRef(control);
   useEffect(() => {
     controlRef.current = control;
+  });
+
+  // Reduced motion collapses the weighty landing bounce to a plain settle. Read
+  // through a ref so the roll effect (which captures values when a roll begins)
+  // always sees the current preference without re-subscribing.
+  const reduce = usePrefersReducedMotion();
+  const reduceRef = useRef(reduce);
+  useEffect(() => {
+    reduceRef.current = reduce;
   });
 
   // The scene camera, kept in a ref so the roll effect can aim the face-forward
@@ -273,21 +283,36 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
           }
         };
 
-        // Phase 3 — landing thud (0.15s): a sharp downward dip + a squash pulse.
-        // power4.out reads as the die clicking onto a surface. Phase 4 —
-        // recovery: ease back up to the idle baseline (y:0). d8 adds a small
-        // bounce. The thud only moves position/scale, so it never disturbs the
-        // face-forward orientation. Then the value is reported.
-        const tl = gsap.timeline({ onComplete: revealAndFinish });
-        tl.to(g.position, { y: -thudDrop, duration: 0.15, ease: "power4.out" }, 0);
-        tl.to(g.scale, { x: thudScale, y: thudScale, z: thudScale, duration: 0.075, ease: "power4.out" }, 0);
-        tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 0.075, ease: "power2.out" }, 0.075);
-        if (thudBounce) {
-          tl.to(g.position, { y: 0.03, duration: 0.12, ease: "power2.out" }, 0.15);
-          tl.to(g.position, { y: 0, duration: thudRecover, ease: "power2.out" });
-        } else {
-          tl.to(g.position, { y: 0, duration: thudRecover, ease: "power2.out" }, 0.15);
+        // Reduced motion: skip the weighty squash/bounce entirely and settle
+        // straight to rest before revealing. The tumble itself is untouched.
+        if (reduceRef.current) {
+          gsap.to(g.scale, { x: 1, y: 1, z: 1, duration: 0.1, ease: "power2.out" });
+          gsap.to(g.position, { y: 0, duration: 0.1, ease: "power2.out", onComplete: revealAndFinish });
+          return;
         }
+
+        // Phase 3 — weighty landing. The die meets the floor with a sharp dip,
+        // then a NON-UNIFORM squash (flatten + spread) — the horizontal spread
+        // widens the cast shadow beneath, the "shadow squash", and the non-uniform
+        // deform reads as mass (vs the old uniform pulse). It counter-stretches on
+        // the rebound, then both scale and height overshoot their resting pose and
+        // settle back: the die reads as having weight. `sq` derives from each
+        // die's thudScale so per-die landing character carries; floored so even
+        // the lightest die lands with a little heft. Scale/position only, so the
+        // face-forward orientation is never disturbed. Then the value is reported
+        // (the land tick fires with it).
+        const sq = Math.max(thudScale - 1, 0.025);
+        const tl = gsap.timeline({ onComplete: revealAndFinish });
+        tl.to(g.position, { y: -thudDrop, duration: 0.11, ease: "power4.out" }, 0);
+        tl.to(g.scale, { x: 1 + sq * 1.3, y: 1 - sq * 1.7, z: 1 + sq * 1.3, duration: 0.08, ease: "power3.out" }, 0);
+        tl.to(g.scale, { x: 1 - sq * 0.6, y: 1 + sq * 0.9, z: 1 - sq * 0.6, duration: 0.09, ease: "power2.inOut" }, 0.08);
+        tl.to(g.scale, { x: 1, y: 1, z: 1, duration: 0.22, ease: "back.out(2.4)" }, 0.17);
+        // Vertical rebound: rise a touch past the baseline, then settle to 0 with
+        // an overshoot — paired with the scale settle for the weighty bounce. d8
+        // keeps its livelier hop; thudRecover still tunes each die's settle time.
+        const rise = thudBounce ? 0.05 : 0.028;
+        tl.to(g.position, { y: rise, duration: 0.12, ease: "power2.out" }, 0.11);
+        tl.to(g.position, { y: 0, duration: thudRecover, ease: "back.out(1.7)" }, 0.23);
         if (thudRotateCorrect) {
           tl.to(g.rotation, { z: 0.035, duration: 0.12, ease: "power2.out" }, 0.15);
           tl.to(g.rotation, { z: 0, duration: 0.18, ease: "power2.inOut" }, 0.27);
