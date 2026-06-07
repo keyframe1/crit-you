@@ -246,10 +246,20 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
         g.quaternion.slerpQuaternions(qStart, qEnd, settleProxy.t);
       },
       onComplete: () => {
-        // The die has settled face-forward. The value is reported AFTER the
-        // landing, so the number is the payoff of a physical action, not an
-        // overlay — and it stamps onto the now-flat face.
-        const revealAndFinish = () => {
+        // The die has settled face-forward. Two callbacks: `reveal` STAMPS the
+        // number and is fired on the landing IMPACT (see tl.call below) so the
+        // number and the bounce are ONE beat; `finish` runs once the landing has
+        // fully settled — it plays the die's own reaction and resumes the idle
+        // float. The number is the payoff of a physical action, stamped onto the
+        // now-flat, face-forward face.
+        const reveal = () => {
+          // Roll complete: hand the value to the page, which scale-punches the
+          // CSS-overlay number in with NO delay (so it stamps with the landing)
+          // and raises the speech bubble. The 3D scene renders no text.
+          onResultRef.current(value);
+        };
+
+        const finish = () => {
           // Resume the idle float/spin and release the input lock.
           const resume = () => {
             rollingRef.current = false;
@@ -257,15 +267,10 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
             lockRef.current = false;
           };
 
-          // Roll complete: hand the value to the page, which fades the CSS-overlay
-          // number in (0.15s later) and raises the speech bubble (0.3s after the
-          // number). The 3D scene renders no text.
-          onResultRef.current(value);
-
           if ((isMax && celebrate) || (isMin && fail)) {
-            // The die reacts 0.1s after the number appears (~0.25s after the
-            // landing), so the celebration never fights the reveal. The reaction
-            // owns calling `done` (= resume) when it finishes.
+            // The die reacts a beat after the landing has settled, so the
+            // celebration never fights the stamp (which already fired on impact).
+            // The reaction owns calling `done` (= resume) when it finishes.
             reactionDelay.current = gsap.delayedCall(0.25, () => {
               const ctx = {
                 group: g,
@@ -284,10 +289,19 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
         };
 
         // Reduced motion: skip the weighty squash/bounce entirely and settle
-        // straight to rest before revealing. The tumble itself is untouched.
+        // straight to rest, stamping the number AS it reaches rest (no pause).
+        // The tumble itself is untouched.
         if (reduceRef.current) {
           gsap.to(g.scale, { x: 1, y: 1, z: 1, duration: 0.1, ease: "power2.out" });
-          gsap.to(g.position, { y: 0, duration: 0.1, ease: "power2.out", onComplete: revealAndFinish });
+          gsap.to(g.position, {
+            y: 0,
+            duration: 0.1,
+            ease: "power2.out",
+            onComplete: () => {
+              reveal();
+              finish();
+            },
+          });
           return;
         }
 
@@ -302,7 +316,7 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
         // face-forward orientation is never disturbed. Then the value is reported
         // (the land tick fires with it).
         const sq = Math.max(thudScale - 1, 0.025);
-        const tl = gsap.timeline({ onComplete: revealAndFinish });
+        const tl = gsap.timeline({ onComplete: finish });
         tl.to(g.position, { y: -thudDrop, duration: 0.11, ease: "power4.out" }, 0);
         tl.to(g.scale, { x: 1 + sq * 1.3, y: 1 - sq * 1.7, z: 1 + sq * 1.3, duration: 0.08, ease: "power3.out" }, 0);
         tl.to(g.scale, { x: 1 - sq * 0.6, y: 1 + sq * 0.9, z: 1 - sq * 0.6, duration: 0.09, ease: "power2.inOut" }, 0.08);
@@ -317,6 +331,12 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
           tl.to(g.rotation, { z: 0.035, duration: 0.12, ease: "power2.out" }, 0.15);
           tl.to(g.rotation, { z: 0, duration: 0.18, ease: "power2.inOut" }, 0.27);
         }
+        // Stamp the number ON the impact beat: fire the reveal as the die bottoms
+        // out of its dip / hits peak squash (~0.08s into the landing), so the
+        // number and the settle bounce read as ONE beat instead of the number
+        // trailing the settle. `finish` (idle resume + reaction) still runs at
+        // tl complete.
+        tl.call(reveal, undefined, 0.08);
       },
     });
   }, [

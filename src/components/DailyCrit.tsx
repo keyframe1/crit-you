@@ -503,7 +503,7 @@ export default function DailyCrit({ onClose }: Props) {
       setRoll({ id: ++idRef.current, value, max: faces, dieType: die, line });
       setNumberVisible(true);
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setNumberVisible(false), 2150);
+      hideTimer.current = setTimeout(() => setNumberVisible(false), 1300);
 
       // Per-roll landing sound: a 1 busts (womp), a faces nat-max flourishes, a
       // near-crit sparkles, anything else just ticks. The bigger bank-outcome

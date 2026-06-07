@@ -63,10 +63,10 @@ export default function Home() {
 
   const appReady = forceReady || (sceneReady && fontsReady && minTimeUp);
 
-  // The die reports its rolled value once it has landed; we own the line choice
+  // The die reports its rolled value the instant it lands; we own the line choice
   // so the displayed personality text and the share card always agree. Showing
-  // the number kicks off its hold timer: it appears 0.15s later (ResultNumber)
-  // and stays for 2.0s before fading out.
+  // the number kicks off its hold timer: it stamps in immediately (ResultNumber),
+  // holds ~1.1s fully visible, then fades cleanly out.
   const handleRoll = useCallback(
     (value: number) => {
       const max = maxFor(dieType);
@@ -79,7 +79,7 @@ export default function Home() {
       });
       setNumberVisible(true);
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setNumberVisible(false), 2150);
+      hideTimer.current = setTimeout(() => setNumberVisible(false), 1300);
       // The landed value is the payoff: a settle tick, a flourish on a nat-max
       // (over the die's own celebration), a sparkle on a near-crit. Tier = the
       // selected die.
