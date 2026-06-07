@@ -376,6 +376,11 @@ export default function PolyDie({ rollNonce, onResult, onRollStart, max, config,
           emissiveIntensity={0}
           metalness={0.15}
           roughness={0.55}
+          // Faint reflections off the procedural environment (see DiceCanvas) so
+          // the die reads as a premium physical object. Kept low — metalness +
+          // roughness are UNCHANGED, so the flat-shaded character is intact; this
+          // only adds a subtle fresnel sheen, not gloss/chrome.
+          envMapIntensity={0.2}
           flatShading
         />
         {/* Constant screen-space edges. drei's <Edges> is already LineSegments2 +
