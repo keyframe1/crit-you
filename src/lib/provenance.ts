@@ -177,3 +177,18 @@ export interface StoredSubmission {
 export function submissionKey(date: string, anonId: string): string {
   return `sub:${date}:${anonId}`;
 }
+
+// Reverse index: the share-grid code → its StoredSubmission. The verification
+// code is a ONE-WAY HMAC over (date, anonId, status, score) — given only a code
+// (all the Discord bot's `/crit submit <code>` ever receives), there is no way to
+// recover the result without this lookup. /api/daily/submit writes it alongside
+// the submission; the bot reads it, then re-runs verifyCodeFor + validateDailyScore
+// over the recovered tuple as a second, independent check.
+//
+// Codes are ~30-bit truncated HMACs, so a collision between two DISTINCT results
+// is ~1-in-a-billion; if one ever happened the later submit would overwrite the
+// index entry, and the loser's code would resolve to the winner's tuple. That's
+// acceptable for a dice game's social leaderboard and not worth widening the code.
+export function codeKey(code: string): string {
+  return `code:${code.toUpperCase()}`;
+}

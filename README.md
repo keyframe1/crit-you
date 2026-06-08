@@ -64,3 +64,38 @@ wireframe. The active type drives the result range and the shape on screen.
 
 Installable via `public/manifest.json`, dark theme color `#0a0a0a`, and Apple
 web-app meta tags. Regenerate icons with `node scripts/gen-icons.mjs`.
+
+## Discord bot
+
+An HTTP-interactions bot exposes the Daily Crit in any server it's added to:
+
+- `/crit today` — today's die + the play link (Discord can't run a parent
+  command bare once it has subcommands, so this is the "today's prompt" command).
+- `/crit submit <code>` — verifies the share-grid `verify #…` code server-side
+  and logs it to this server's leaderboard.
+- `/crit leaderboard` — the server's standings, **ordered by current streak**
+  (today's score breaks ties). The daily is deterministic, so a sustained,
+  server-validated streak — not a raw top score — is the real flex.
+
+**Endpoint:** `POST /api/discord/interactions` verifies the Ed25519 signature on
+every request, answers Discord's PING, and replies within the 3s window.
+
+**Env (set on Vercel):** `DISCORD_APP_ID`, `DISCORD_PUBLIC_KEY`,
+`DISCORD_BOT_TOKEN` — plus the existing Upstash (`KV_REST_API_URL`,
+`KV_REST_API_TOKEN`) and `CRIT_SIGNING_SECRET` used by the Daily provenance API.
+
+**One-time setup after deploy:**
+
+1. In the Discord Developer Portal → your app → **Interactions Endpoint URL**,
+   set `https://crit.you/api/discord/interactions` and save (Discord sends a
+   verification PING — it passes once deployed).
+2. Register the commands once:
+
+   ```bash
+   vercel env pull .env.local                              # gets APP_ID + BOT_TOKEN
+   node --env-file=.env.local scripts/register-commands.mjs
+   ```
+
+   Add `--guild=<GUILD_ID>` for instant registration in a single test server
+   (global commands take up to ~1h to propagate). Re-run only if the command
+   shapes change.

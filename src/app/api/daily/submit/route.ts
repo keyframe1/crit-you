@@ -5,6 +5,7 @@
 // same code, so a cheat can't overwrite an earlier honest result.
 
 import {
+  codeKey,
   isProvenanceStatus,
   submissionKey,
   validateDailyScore,
@@ -72,6 +73,11 @@ export async function POST(request: Request): Promise<Response> {
       status: stored.status,
       score: stored.score,
     });
+    // Reverse index so the Discord bot can resolve a bare code back to this
+    // result (the code is a one-way HMAC; see lib/provenance#codeKey). Written
+    // on every submit — including the idempotent re-read path — so re-opening a
+    // finished daily self-heals the index for runs banked before it existed.
+    await redis.set(codeKey(code), stored);
     return Response.json({
       code,
       date: stored.date,
