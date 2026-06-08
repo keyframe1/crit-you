@@ -12,6 +12,7 @@ import SoundToggle from "@/components/SoundToggle";
 import BrandedLoader from "@/components/BrandedLoader";
 import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
 import { pickLine } from "@/lib/lines";
+import { analytics } from "@/lib/analytics";
 import {
   playClack,
   playRollResult,
@@ -80,6 +81,7 @@ export default function Home() {
       setNumberVisible(true);
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = setTimeout(() => setNumberVisible(false), 1300);
+      analytics.roll(dieType);
       // The landed value is the payoff: a settle tick, a flourish on a nat-max
       // (over the die's own celebration), a sparkle on a near-crit. Tier = the
       // selected die.
@@ -184,8 +186,14 @@ export default function Home() {
           stage. A minimal wordmark footer sits beneath. */}
       <div className="shrink-0 border-t border-black/[0.06] bg-black/[0.02]">
         <DiceSelector value={dieType} onChange={handleSelect} />
-        <footer className="text-center pb-3 -mt-2">
-          <span className="font-mono text-[10px] tracking-[0.15em] text-[var(--ink)] opacity-30">
+        <footer className="px-6 pb-3 -mt-2 text-center">
+          {/* Honest privacy line: per-device stats, plus anonymous aggregate
+              analytics (no PII) now that Crit measures usage. */}
+          <p className="mx-auto max-w-[340px] font-mono text-[9px] leading-relaxed tracking-[0.06em] text-[var(--ink)] opacity-30">
+            Your stats stay on this device. Crit collects anonymous, aggregate
+            usage analytics (no personal data) to improve the app.
+          </p>
+          <span className="mt-1 inline-block font-mono text-[10px] tracking-[0.15em] text-[var(--ink)] opacity-30">
             crit.you
           </span>
         </footer>

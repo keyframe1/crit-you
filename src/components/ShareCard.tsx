@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { copyText } from "@/lib/clipboard";
+import { analytics } from "@/lib/analytics";
 import type { Roll } from "@/lib/dice";
 
 // A low-key secondary affordance for free-play: copy the die's personality line +
@@ -15,6 +16,7 @@ export default function ShareCard({ roll }: { roll: Roll | null }) {
 
   const handleCopy = async () => {
     if (!roll) return;
+    analytics.shareCopied("free");
     await copyText(`${roll.line}\n\ncrit.you`);
     setToast(true);
     setTimeout(() => setToast(false), 2000);

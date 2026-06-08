@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -48,7 +49,11 @@ export default function RootLayout({
       lang="en"
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        {children}
+        {/* Vercel Web Analytics — cookieless, no consent banner, traffic baseline. */}
+        <Analytics />
+      </body>
     </html>
   );
 }

@@ -7,6 +7,7 @@ import Pip, { type PipExpression } from "./Pip";
 import DieGlyph from "./DieGlyph";
 import { CAP } from "@/lib/daily";
 import { labelFor, type DieType } from "@/lib/dice";
+import { analytics } from "@/lib/analytics";
 
 // Pip's first-open rules walkthrough for the Daily. Six pointed beats — Pip's
 // snark, but each mechanic exact and unmistakable — every beat tied to its UI
@@ -193,7 +194,20 @@ export default function DailyWalkthrough({
   const [i, setI] = useState(0);
   const beat = beats[i];
   const last = i === beats.length - 1;
-  const next = () => (last ? onDone() : setI((n) => n + 1));
+  // Reaching the end (the final "Let's roll") is a completion; the Skip button
+  // is a skip. Both still resolve through onDone.
+  const next = () => {
+    if (last) {
+      analytics.walkthroughCompleted();
+      onDone();
+    } else {
+      setI((n) => n + 1);
+    }
+  };
+  const skip = () => {
+    analytics.walkthroughSkipped();
+    onDone();
+  };
   const back = () => setI((n) => Math.max(0, n - 1));
 
   return (
@@ -259,7 +273,7 @@ export default function DailyWalkthrough({
         {/* Footer: skip · progress dots · back/next. */}
         <div className="mt-5 flex items-center justify-between">
           <button
-            onClick={onDone}
+            onClick={skip}
             className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--mid)] transition-colors hover:text-[var(--ink)]"
           >
             Skip

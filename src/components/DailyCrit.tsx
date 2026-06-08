@@ -39,6 +39,7 @@ import {
 } from "@/lib/dailyStore";
 import { buildDailyShareText, outcomeFor } from "@/lib/dailyShare";
 import { copyText } from "@/lib/clipboard";
+import { analytics, type DailyStatus } from "@/lib/analytics";
 import type { DailyControl } from "@/components/dice3d/dailyControl";
 import ResultNumber from "@/components/ResultNumber";
 import Personality from "@/components/Personality";
@@ -151,7 +152,13 @@ function Countdown() {
 // TEXT-share is offered as a secondary where the platform supports it. No images,
 // no markdown. (This whole modal is client-only — dynamic ssr:false — so a
 // render-time capability check is hydration-safe.)
-function DailyShareButton({ text }: { text: string }) {
+function DailyShareButton({
+  text,
+  status,
+}: {
+  text: string;
+  status: DailyStatus;
+}) {
   const [toast, setToast] = useState(false);
   const ping = () => {
     setToast(true);
@@ -162,11 +169,13 @@ function DailyShareButton({ text }: { text: string }) {
     typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const handleCopy = async () => {
+    analytics.shareCopied("daily", status);
     await copyText(text);
     ping();
   };
 
   const handleShare = async () => {
+    analytics.shareCopied("daily", status);
     // Feature-detect at click; fall back to a copy if the sheet isn't there.
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
@@ -521,11 +530,14 @@ export default function DailyCrit({ onClose }: Props) {
     primeAudio(); // unlock audio on the literal button gesture
     const g = gameRef.current;
     if (rollingRef.current || g.status !== "idle" || g.rollCount >= CAP) return;
+    // The first roll of the run is the "started playing" signal (top of the
+    // daily funnel; pairs with referral_landing for shared-link → play).
+    if (g.rollCount === 0) analytics.dailyStarted(todayYmd, die);
     pendingValueRef.current = sequence[g.rollCount];
     rollingRef.current = true;
     setRolling(true);
     setRollNonce((n) => n + 1);
-  }, [sequence]);
+  }, [sequence, todayYmd, die]);
 
   const handleBank = useCallback(() => {
     primeAudio(); // unlock audio on the literal button gesture
@@ -552,14 +564,24 @@ export default function DailyCrit({ onClose }: Props) {
     if (readOnly || game.status === "idle" || recordedRef.current) return;
     recordedRef.current = true;
     const busted = game.status === "busted";
+    const finalScore = score(game);
     const updated = recordResult({
       date: todayYmd,
       dieType: die,
-      score: score(game),
+      score: finalScore,
       rollCount: game.rolls.length,
       busted,
     });
     setStreakNow(updated.currentStreak);
+    // The end of the daily funnel — status mirrors the share/outcome bucket so
+    // retention + streak-continuation derive from this event per distinct_id.
+    analytics.dailyResult({
+      date: todayYmd,
+      dieType: die,
+      status: outcomeFor(busted, game.rolls.length),
+      score: finalScore,
+      rollCount: game.rolls.length,
+    });
     // Finish sound. A bust already womped on its landing roll, so it stays quiet
     // here. A clean bank chimes; a perfect run (survived all CAP rolls) or a
     // streak milestone earns the full flourish instead — which, per spec,
@@ -652,11 +674,12 @@ export default function DailyCrit({ onClose }: Props) {
   // The spoiler-light text grid for sharing. Streak resolves to the just-recorded
   // value during a fresh run, or the stored value in the read-only view.
   const shareStreak = streakNow ?? getStreakInfo().currentStreak;
+  const shareStatus = outcomeFor(busted, rollCountForShare);
   const shareText = buildDailyShareText({
     date: now,
     faces,
     rollCount: Math.max(1, rollCountForShare),
-    outcome: outcomeFor(busted, rollCountForShare),
+    outcome: shareStatus,
     score: finalScore,
     streak: shareStreak,
   });
@@ -895,7 +918,7 @@ export default function DailyCrit({ onClose }: Props) {
               reduce={reduce}
             />
 
-            <DailyShareButton text={shareText} />
+            <DailyShareButton text={shareText} status={shareStatus} />
 
             {readOnly && (
               <p className="text-center font-mono text-[11px] leading-relaxed text-[var(--mid)]">
