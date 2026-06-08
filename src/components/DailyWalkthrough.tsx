@@ -40,7 +40,7 @@ function buildBeats(die: DieType): Beat[] {
       cue: "Today's dice",
       line: (
         <>
-          Everyone gets the <strong>same</strong> dice today — same rolls, same
+          Everyone gets the <strong>same</strong> dice today: same rolls, same
           order. No do-overs.
         </>
       ),
@@ -86,7 +86,7 @@ function buildBeats(die: DieType): Beat[] {
       cue: "The BANK button",
       line: (
         <>
-          Hit <strong>BANK</strong> to lock those points in for keeps — and keep
+          Hit <strong>BANK</strong> to lock those points in for keeps, and keep
           your streak alive.
         </>
       ),
@@ -119,10 +119,10 @@ function buildBeats(die: DieType): Beat[] {
     },
     {
       pip: "worried",
-      cue: "The 1 — read this twice",
+      cue: "The 1: read this twice",
       line: (
         <>
-          Roll a <strong>1</strong> and it&apos;s over — every point from this
+          Roll a <strong>1</strong> and it&apos;s over. Every point from this
           run, <strong>gone</strong>, and your streak with it. So bank before you
           get cocky.
         </>

@@ -135,6 +135,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "I have four sides and you picked the worst one.",
       "Even caltrops have bad days.",
       "You know what has four sides and zero respect? This roll.",
+      "One. I have four sides. You found a way to disrespect all four.",
+      "A caltrop rolled a one. Somewhere, a barefoot soldier sleeps easy.",
+      "One. Pointy on the outside, disappointing on the inside. We match.",
+      "You rolled the angriest die in the bag and got the meekest number. Bold.",
     ],
     low: [
       "Two. Mediocre, even by my standards.",
@@ -145,6 +149,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "That's a two. I'd be angrier, but I'm saving my energy for stepping duty.",
       "Two out of four. The participation award of a caltrop.",
       "A two. On me — the pointiest die in the bag. Embarrassing for us both.",
+      "Two. I peaked at four and you're not even close.",
+      "A two. The caltrop has standards, and you've found the basement of them.",
+      "Two out of four. You're running me at half power, coward.",
+      "Two. I'd menace you over this, but you're clearly suffering enough.",
     ],
     mid: [
       "There is no middle with me. You get small, or you get smaller.",
@@ -155,6 +163,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Caught between my two and my three. Just like your potential.",
       "I contain multitudes. Four of them. This is one of the boring ones.",
       "Somewhere in the middle. For a die my size, that's a rounding error.",
+      "Middle ground. On a triangle. Sit with the geometry of that failure.",
+      "I'm three sharp corners and zero patience. There is no middle here to find.",
+      "A middling result from a die built without a middle. Talented, in the worst way.",
+      "You averaged a triangle. Nobody asked you to. Nobody's impressed.",
     ],
     high: [
       "Three out of four. I'll allow it.",
@@ -165,6 +177,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Look at you, rolling a three. The caltrop is mildly less furious.",
       "Three out of four. The most a disappointment like you deserves.",
       "A solid three. We don't talk about how close that was to a two.",
+      "Three. The caltrop's version of a standing ovation. Now sit.",
+      "A three. One short of greatness, which for me is a very short fall.",
+      "Three out of four. Don't let it go to your head — there's no room up there.",
+      "Three. I'll allow a flicker of pride. Pointed pride. The only kind I have.",
     ],
     nat_max: [
       "FOUR. That's literally everything I have and you got it.",
@@ -178,8 +194,12 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "FOUR. That's 100% of everything I've got!",
       "Size doesn't matter. Tell them I said that.",
       "Maximum damage. From minimum die. Let that sink in.",
-      "The underdog story writes itself.",
+      "Four. Remember this the next time you call me 'just the damage die.'",
       "Who needs twenty sides when four will do?",
+      "FOUR. The whole triangle. Step on me now and I'll consider it applause.",
+      "Maximum. The smallest die in the bag just embarrassed your expectations. Sting?",
+      "Four out of four. Small. Sharp. And right now, completely FLAWLESS.",
+      "A natural four. The caltrop has peaked. Bow — and mind your bare feet.",
     ],
   },
   // ═══ D6 — "The Basic" ═══
@@ -201,6 +221,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Yahtzee would be ashamed.",
       "Even Monopoly dice judge you right now.",
       "I've rolled billions of times across human history. That was among them.",
+      "One. I've rolled this a billion times. Familiarity breeds exactly this.",
+      "A one. The cube notes it, files it, moves on. You should too.",
+      "One. Craps players have a word for this. It isn't a kind word.",
+      "The lowest face. I keep it in inventory. You keep requisitioning it.",
     ],
     low: [
       "Two. You could've stayed home and rolled a coin.",
@@ -211,6 +235,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Snake eyes' lonelier cousin. Just the one eye.",
       "Two. I don't get excited. This is, in part, why.",
       "A two. Balanced books, unbalanced luck.",
+      "Two. The audit is complete. The audit is unkind.",
+      "A two. Catan players are already groaning. I hear it from here.",
+      "Two. The most trusted die in the world, and look where that trust got you.",
+      "A two. Predictably small. I don't do unpredictable.",
     ],
     mid: [
       "Adequate.",
@@ -221,6 +249,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "This is the roll equivalent of a beige sedan. It runs.",
       "Square die, square result. We're nothing if not consistent.",
       "The most exciting thing about this is that it could have been worse.",
+      "Middle of the cube. A billion rolls of experience, and it's all been this.",
+      "Dead average. I'd apologize, but the accountant doesn't expense apologies.",
+      "A median result. The most statistically honest thing you'll do all day.",
+      "Right where the bell curve is fattest. Comfortable. Crushingly comfortable.",
     ],
     high: [
       "Five. I nearly gave you everything. Nearly.",
@@ -231,6 +263,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "A five. Don't make it weird. I certainly won't.",
       "Five. Solid. Dependable. One short of a story.",
       "A five — the d6 equivalent of a standing ovation. Held internally.",
+      "Five. One short of the whole cube. I'm used to falling one short.",
+      "A five. Solid. I'd frame it, but framing isn't in the budget.",
+      "Five. Nearly everything I've got. I'm withholding the rest on principle.",
+      "A five. Respectable. Let's not make a line item of it.",
     ],
     nat_max: [
       "Six. Not glamorous, but correct.",
@@ -246,6 +282,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Textbook. Literally. I'm in math textbooks.",
       "Six. Efficient. Professional. Meeting adjourned.",
       "Maximum output. Minimum fanfare. As it should be.",
+      "Six. The most common die rolled its best. Overdue. Quietly satisfying.",
+      "Maximum. I won't gloat. Gloating isn't a deductible expense.",
+      "Six out of six. The cube delivers. The cube always delivers, eventually.",
+      "A natural six. Don't applaud. A polite nod has been logged and filed.",
     ],
   },
   // ═══ D8 — "The Middle Child" ═══
@@ -267,6 +307,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "I'm not crying, you're crying. Okay, I'm crying.",
       "The longsword deserved better. I'm sorry, longsword.",
       "What would the d12 do? Probably also fail, but DRAMATICALLY.",
+      "One. I felt it go wrong mid-air. I always feel it. I'm so sorry.",
+      "A one. The d10 is going to do that little math sigh. I can't bear the math sigh.",
+      "One. I rehearsed a good roll all night. Forgot it the second you needed me.",
+      "A one. Eight sides, and I showed you the saddest one. I'll find the others, I promise.",
     ],
     low: [
       "I know that's not great. Do you want to roll again? You can roll again.",
@@ -277,6 +321,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "I'm warming up! Dice warm up, right? Tell me dice warm up.",
       "Did you... did you need a low one for anything? Maybe you did. Maybe.",
       "Low again. I write these down, you know. I keep track of my failures.",
+      "Low. I know. I saw your shoulders drop. I catalog the shoulder-drops.",
+      "That's under par. Is par a dice thing? I'll learn what par is. For you.",
+      "Not great. But I'm coachable! Dice are coachable, right? Tell me we're coachable.",
+      "Below average. I can hear the d6 being smug from inside the bag.",
     ],
     mid: [
       "Is that okay? I can't tell if that's okay.",
@@ -287,6 +335,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Not bad! Not bad, right? You're nodding. Why aren't you nodding?",
       "See, I CAN be average. I worked really hard to be average.",
       "A solid mid roll. I practiced. I actually practiced for this.",
+      "Middle. That's progress, right? From the bottom? We're climbing! We're climbing.",
+      "Average! I hit average! Nobody throws a party for average but ME.",
+      "Right in the middle. I LIVE here. I've decorated. Do you want to come in?",
+      "Mid roll. Not a disaster! I'm framing 'not a disaster.' It's going on the wall.",
     ],
     high: [
       "See? I'm useful! I told you I was useful!",
@@ -298,6 +350,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Look at me go! I'm having a moment — let me have this!",
       "That's basically a crit for me. Right? That's basically perfect, RIGHT?",
       "I'm something of a damage die myself.",
+      "High! Did you SEE that? Okay you saw it — but did you FEEL it?",
+      "Near the top! Someone get the d20, I want a witness!",
+      "That's a great roll. For me. For ANYONE. Mostly for me. Let me have it.",
+      "I'm useful AND impressive?! Don't wake me if this is a dream!",
     ],
     nat_max: [
       "EIGHT! Did you see that? Did everyone see that?",
@@ -314,6 +370,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Peak middle child: exceeding expectations nobody had.",
       "Pin this. Sticky this. Engrave it on my FACE.",
       "I'm not the chosen die. But today I CHOSE VIOLENCE.",
+      "EIGHT! I'd like to thank the bag, the table, and whoever didn't pick the d20!",
+      "Maximum! ME! The middle child! Put THAT in the family newsletter!",
+      "EIGHT OUT OF EIGHT! The middle child got an A+! Call my parents! Call EVERYONE!",
+      "The best face I own, landed UP! Did you plan that? I'll say you planned that!",
     ],
   },
   // ═══ D10 — "The Statistician" ═══
@@ -335,6 +395,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "The probability was 10%. You achieved the improbable. Poorly.",
       "Data point collected. Filing under 'outlier, unfavorable.'",
       "The spreadsheet weeps.",
+      "One. A tenth of the time this is destiny. Today it's just embarrassing.",
+      "The minimum. I ran a Monte Carlo on your luck. The simulation quit.",
+      "One out of ten. The data is clean. Your fortune is not.",
+      "A one. I'd call it an outlier, but I'm beginning to suspect it's the trend.",
     ],
     low: [
       "You're performing below the expected value of 5.5.",
@@ -345,6 +409,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "The left tail of the distribution. We don't linger here; we can't afford to.",
       "I've modeled your luck. The R-squared is depressing.",
       "Bottom tercile. The data does not flatter you, but the data does not lie.",
+      "Below the mean. Again. I'm starting to think you ARE the left tail.",
+      "Sub-par, statistically speaking. And I only speak statistically.",
+      "A low roll. The confidence interval on your competence just widened.",
+      "Underperforming expectation. The residuals are piling up. It's a mess down here.",
     ],
     mid: [
       "You are within one standard deviation of the mean. Adequate.",
@@ -355,6 +423,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "This is the fat part of the distribution — where most of you live, statistically.",
       "The mode would like a word, but the mean accepts you.",
       "Within tolerance. Not significant. File it under 'noise.'",
+      "Squarely at expectation. Boring is just the mean wearing a disguise.",
+      "Dead center of the distribution. A rounding error away from forgettable.",
+      "Right at the median. Half of all outcomes pity you. The other half ARE you.",
+      "Expected value, achieved. The least surprising result mathematics permits.",
     ],
     high: [
       "Ninety-fifth percentile. Acceptable variance.",
@@ -365,6 +437,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "One short of significance. The universe does love a near-miss.",
       "A high roll. I'll grant you a healthy z-score. Don't make it weird.",
       "The right tail. Enjoy the thin air; the regression is coming.",
+      "Upper tail. A pleasant deviation. Don't anthropomorphize it into 'skill.'",
+      "Above expectation by a healthy margin. The standard error forgives you. Briefly.",
+      "A high roll. Statistically significant. Emotionally, I remain neutral. Mostly.",
+      "Near the top of the range. Regression to the mean is already filing the paperwork.",
     ],
     nat_max: [
       "Ten. Maximum output achieved. P-value significant.",
@@ -380,6 +456,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Maximum value achieved. Publishing results.",
       "The bell curve bows.",
       "The numbers, Mason. The numbers are good.",
+      "Ten. The maximum. A one-in-ten miracle, and the arithmetic actually cooperated.",
+      "Perfect ten. I've checked it four times. It refuses to be wrong.",
+      "Ten out of ten. The distribution has no notes. I have no notes. Stunning.",
+      "Maximum likelihood, maximum value. For once the model and reality agree.",
     ],
   },
   // ═══ D12 — "The Underdog" ═══
@@ -402,6 +482,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Even the bard wouldn't sing about this.",
       "One. On a d12. The dramatic irony writes itself.",
       "My moment. MY moment. And it's a one.",
+      "ONE. The understudy finally gets the stage and forgets the lines. TYPICAL.",
+      "A one. Twelve faces of potential and the curtain rises on the worst one.",
+      "After all that buildup. ONE. The critics were right about me.",
+      "The barbarian unsheathed me for THIS. I can already hear the axe being sheathed.",
     ],
     low: [
       "Is it me? It's me, isn't it. You're going to pick the d20 again.",
@@ -412,6 +496,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "This is fine. A setback. Every great die has a setback. Mine is now.",
       "The d6 is laughing. I can hear the d6 laughing in the bag.",
       "Give me time. The barbarian's rage build comes online eventually.",
+      "Low. But every comeback needs a humiliating first act. This is mine. AGAIN.",
+      "A weak roll. The barbarian sighs. I FELT that sigh in my edges.",
+      "Beneath me. I trained for months in that bag. MONTHS. For this?",
+      "The d20 gets a montage. I get a single sad violin. I can HEAR it.",
     ],
     mid: [
       "That's fine. That's a fine roll. You don't need to look at the d20.",
@@ -422,6 +510,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "A solid showing. Put it on my highlight reel. I'm assembling a reel.",
       "This is the role I was BORN to play: a solid mid-tier hero.",
       "Halfway to glory. The arc continues! The arc CONTINUES!",
+      "Mid-tier, delivered with the CONVICTION of a finale! Did you feel it?",
+      "Average, but I'm SELLING it. Watch the commitment. WATCH IT.",
+      "The middle of the pack, played like a standing ovation. That's range.",
+      "Not the climax. The RISING ACTION. Stay seated, the arc is BUILDING.",
     ],
     high: [
       "Nearly maximum! Tell the bard! TELL THE BARD!",
@@ -433,6 +525,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "I have NEVER been closer to greatness. Document this.",
       "Somewhere, a d4 weeps with envy. As it should!",
       "I'm not locked in here with you. You're locked in here with ME!",
+      "So HIGH. The understudy is stealing the show! Alert the LEAD!",
+      "Almost the summit! My name in lights! A small marquee, but it's MINE!",
+      "Top of the range! The barbarian's eyes just LIT UP! Did you see them light up?!",
+      "Nearly perfect! This is the role they'll REMEMBER me for! Possibly! Hopefully!",
     ],
     nat_max: [
       "TWELVE! TWELVE! I AM THE GREATEST DIE EVER CREATED! WRITE IT DOWN!",
@@ -452,6 +548,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "I AM NOT A MEME! I AM A LEGEND!",
       "SOMEBODY CLIP THIS!",
       "The d20 could NEVER. Actually it could. BUT STILL!",
+      "TWELVE! Tell the d4! Tell the d6! Tell EVERY die that ever sat in front of me!",
+      "MAXIMUM! Roll the credits with MY name first! ABOVE the d20's! I EARNED it!",
+      "TWELVE OUT OF TWELVE! The understudy IS the lead now! Recast the WHOLE play!",
+      "PERFECTION! Decades in the bag, all for THIS ONE GLORIOUS ROLL!",
     ],
   },
   // ═══ D20 — "The Main Character" ═══
@@ -478,6 +578,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "The dice giveth, and today the dice taketh.",
       "Somewhere, a DM just smiled. That's never good.",
       "Galaxy brain move: roll a 1, make the DM feel something.",
+      "Natural one. Even the protagonist gets a humiliation episode. This is mine.",
+      "A one. Twenty sides of legend, and the camera caught the worst angle.",
+      "One. The fans will riot. I'll issue a statement. It will blame you.",
+      "Critical failure. On ME, the die they trusted. The betrayal writes itself.",
     ],
     low: [
       "Below average. On the die that's supposed to save you.",
@@ -488,6 +592,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "You rolled the protagonist and got a side-quest result.",
       "I'd apologize, but leads don't do that.",
       "Underwhelming. Somehow still more interesting than a d6.",
+      "Low. I'll fix it in post. The trailer will look incredible.",
+      "A small number. Off-brand for me. My agent will hear about this.",
+      "Disappointing. Though even my off-days out-draw the supporting cast.",
+      "Beneath the marquee. The lead doesn't do bit parts. Yet here we are.",
     ],
     mid: [
       "Adequate. The bare minimum of main-character energy.",
@@ -508,6 +616,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "That's the roll equivalent of wearing khakis.",
       "Neither here nor there. The Midwest of numbers.",
       "Room temperature. The roll, not the take.",
+      "Mid. The episode nobody quotes, but the plot needed it.",
+      "Average. I'll allow it. Even a franchise gets a slow second act.",
+      "A serviceable number. The kind of scene they play under the voiceover.",
+      "Fine. Not every beat can be the one they cut into the trailer.",
     ],
     high: [
       "High. Of course it's high. Have you met me?",
@@ -519,6 +631,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Big, bold, just shy of legendary. Like a good trailer.",
       "See? This is why every important roll comes through me.",
       "Call an ambulance. But not for me.",
+      "High. Naturally. The lead doesn't do small. Box office demands it.",
+      "Strong roll. Not the finale, but a scene they'll rewind.",
+      "One off perfection. I leave a little on the table. It's called mystique.",
+      "Big number. The crowd leans in. I was born to be leaned-in-at.",
     ],
     nat_max: [
       "Natural twenty. Was there ever any doubt?",
@@ -542,6 +658,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Achievement unlocked: Peak Performance.",
       "They said it couldn't be done. They were almost right.",
       "Main character energy confirmed.",
+      "Natural twenty. Cue the swelling strings. They always swell for me.",
+      "Critical hit. Roll the highlight reel — oh wait, I AM the highlight reel.",
+      "Twenty. The sequel just greenlit itself. I'm already signed on.",
+      "Twenty out of twenty. Print it. That's a wrap on perfection.",
     ],
   },
   // ═══ D30 — "The Exotic" ═══
@@ -564,6 +684,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Somewhere, a d20 is laughing. How pedestrian.",
       "Even my failures are rare. Collecting them all?",
       "The sommelier of dice rolls. This vintage: terrible.",
+      "One. Thirty exquisite faces, and you unearthed the one fit for a d6.",
+      "A natural one. I was hand-poured for connoisseurs. I got you instead.",
+      "One. The provenance of this die is impeccable. The roll is an embarrassment to it.",
+      "A one. In certain old supplements this voids the roll entirely. How I wish we used them.",
     ],
     low: [
       "Pedestrian.",
@@ -575,6 +699,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "How quaint, a small number. The d8 feels validated, and I despise it for that.",
       "You've reduced an exotic instrument to a parlor trick. Bravo. Truly.",
       "I find your lack of sides... disturbing.",
+      "How gauche. A number any drugstore die could have produced.",
+      "Beneath my register entirely. I was forged for grander numerals than this.",
+      "A trifling result. The common dice call it a Tuesday. I call it a tragedy.",
+      "Single digits, from a connoisseur's die. Vintage wine in a paper cup.",
     ],
     mid: [
       "Functional. If you wanted functional, you could have used a d20 like everyone else.",
@@ -585,6 +713,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Acceptable, in the way that 'acceptable' is faint praise.",
       "Now we approach numbers the lesser dice can only theorize about.",
       "A middling result. For most dice this is the ceiling. For me, it's the foyer.",
+      "We have left the gutter the common dice call home. Barely.",
+      "The middle of my considerable range. For you, an achievement. For me, a warm-up.",
+      "A median result. Adequate by my standards, which is to say barely at all.",
+      "You approach competence. Slowly, and with the grace of a thrown brick.",
     ],
     high: [
       "Now you're beginning to deserve me.",
@@ -596,6 +728,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "NOW you see why you chose the exotic option. You're learning.",
       "A high roll, by my exacting standards. I shall permit a small, regal nod.",
       "You merely adopted the high numbers. I was born in them.",
+      "Superb, by the standards of lesser dice. Merely good, by mine.",
+      "A number with altitude. The d20 would need a ladder to imagine it.",
+      "Refined. You're rolling me as I was intended. Took you long enough.",
+      "High and rarefied. The air up here is thin. The company, thinner still.",
     ],
     nat_max: [
       "Thirty. Perfection. Most players will never experience this.",
@@ -611,6 +747,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Standing ovation from the probability gods.",
       "The d20's ceiling is my floor. Remember that.",
       "One does not simply roll a thirty. Unless one is me.",
+      "Thirty. The very crown of me. Few hands have earned the sight of it.",
+      "Maximum. The pedestrian dice will go their whole lives without touching this.",
+      "Thirty out of thirty. Flawless and exotic. The two words I was minted to embody.",
+      "A natural thirty. Decant something old. You've done the impossible, and with taste.",
     ],
   },
   // ═══ D∞ — "The Celestial / The Oracle" ═══
@@ -629,9 +769,13 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Entropy wins, as it always does. Begin again.",
       "The void answers. The void says one.",
       "Even stars collapse. This is your supernova.",
-      "The cosmos has spoken. It said 'lol.'",
+      "The cosmos has spoken. It chose not to elaborate.",
       "In an infinite universe, you found the smallest number.",
       "The oracle is... recalculating.",
+      "One. Light takes ages to cross the dark. Tonight it did not bother.",
+      "A single dying ember in an endless night. The cosmos has seen this before.",
+      "The heavens turned their gaze elsewhere. No malice in it. Only distance.",
+      "One. Even the brightest stars begin as nothing. You are very much at the beginning.",
     ],
     low: [
       "The cosmos has its reasons. None of them favor you.",
@@ -648,6 +792,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Gravity wins again.",
       "A black hole of a roll. Light cannot escape it.",
       "The telescope points down tonight.",
+      "Dim, and distant, and real. The void keeps even its smallest flames.",
+      "The tide of stars runs out before it runs in. You are at the ebb.",
+      "A modest fate. The universe is patient with those it has not yet finished.",
+      "The constellations hold their breath. Your story is not yet written in light.",
     ],
     mid: [
       "Acceptable. The stars neither celebrate nor mourn.",
@@ -668,6 +816,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "The oracle has seen better. The oracle has seen worse.",
       "Even infinity gets bored sometimes.",
       "In space, no one can hear you roll.",
+      "Held in the long balance of things, as a moon is held by a world.",
+      "A number adrift in the great middle dark. Common as hydrogen, and as vital.",
+      "The wheel of stars turns past you without pausing. There is dignity in that.",
+      "Between the bright and the spent, where most of creation quietly resides.",
     ],
     high: [
       "The constellations align in your favor. For now.",
@@ -685,6 +837,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "The nebula glows a little brighter.",
       "High orbit. Not escape velocity, but close.",
       "The truth is out there. It's this number.",
+      "The far lights turn toward you. They are slow to be impressed. They are impressed.",
+      "Bright, and rising. The old constellations make a little room for your name.",
+      "A luminous result. The dark has chosen, for now, to keep its distance.",
+      "Nearly the apex. The heavens lean close to see if you will reach it.",
     ],
     nat_max: [
       "One hundred. The universe bends. Even I am impressed.",
@@ -702,8 +858,63 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "The cosmos says: yes.",
       "Destiny rolled. Destiny won.",
       "It's full of stars.",
+      "One hundred. The dark itself stops to watch. It does not do this often.",
+      "Perfection. A number the heavens keep for the rarest of nights. This is one.",
+      "The full hundred. Creation exhales. Somewhere, the void is taking notes.",
+      "One hundred out of one hundred. The oracle has waited eons to say: yes, this one.",
     ],
   },
+};
+
+// ─── Number-specific reference layer ────────────────────────────────────────
+// Die-neutral movie-reference lines keyed by the EXACT rolled value. The same
+// number is a crit on one die and a low roll on another, so these are written to
+// land on the number alone, regardless of die. pickLine joins the matching list
+// into the candidate pool for that roll (see below) — eligibility falls straight
+// out of the keying, since a die can only ever produce values inside its own
+// range. Values no die can reach are simply absent: 300 is omitted (nothing in
+// the bag rolls it), while 42 and 88 stay because the d∞ (a d100) genuinely can.
+const NUMBER_LINES: Record<number, string[]> = {
+  3: ["Three. Like the Amigos, but less heroic."],
+  4: ["Four. Fantastic, even. The whole team showed up."],
+  5: ["Five. Multipass.", "Five. Korben Dallas remains unimpressed."],
+  6: [
+    "Six. I see dead people. Roughly six of them.",
+    "Sixth sense says don't quit your day job.",
+  ],
+  7: ["Seven. What's in the box? Oh. It's a seven.", "Lucky seven. Allegedly."],
+  8: [
+    "Eight. Your 8 Mile moment. Try not to choke.",
+    "Eight. Crazy. Nobody's winning.",
+  ],
+  9: [
+    "Nine. District nine. Consider yourself relocated.",
+    "Dressed to the nines, headed nowhere.",
+  ],
+  10: ["Ten. A perfect ten. Bo Derek is fuming.", "Ten. Flawless. Deeply suspicious."],
+  11: [
+    "Eleven. This one goes to eleven.",
+    "Eleven. The Upside Down sends its regards.",
+    "Eleven. Ocean's would've recruited you.",
+  ],
+  12: ["Twelve monkeys, zero sense.", "A dozen. Bakers would round up out of pity."],
+  13: [
+    "Thirteen. Houston, we have a problem.",
+    "Thirteen. Jason's favorite. Sleep tight.",
+    "Unlucky for some. You, specifically.",
+  ],
+  20: ["Twenty. Hindsight is 20/20. Foresight, less so."],
+  21: [
+    "Twenty-one. Blackjack. The house still wins.",
+    "Twenty-one. Jump Street. Undercover as competent.",
+  ],
+  23: ["Twenty-three. The number's following you now. Good luck with that."],
+  24: ["Twenty-four. You have twenty-four hours. Tick tock."],
+  28: ["Twenty-eight days later, and you're still rolling."],
+  // d∞ (d100) only — reachable, so they stay. A number-line must never fire on a
+  // value that wasn't rolled, so 300 (which nothing can roll) is intentionally absent.
+  42: ["Forty-two. The answer to life, the universe, and everything. You're welcome."],
+  88: ["Eighty-eight. If my calculations are correct, this is about to get heavy."],
 };
 
 // Per-(die, category) memory of recently-used line indices, so we never repeat a
@@ -717,7 +928,18 @@ const HISTORY_LEN = 5;
 // history resets and starts fresh.
 export function pickLine(dieType: DieType, value: number): string {
   const cat = categoryFor(dieType, value);
-  const pool = DIE_LINES[dieType]?.[cat] ?? FALLBACK_LINES[cat];
+  const catPool = DIE_LINES[dieType]?.[cat] ?? FALLBACK_LINES[cat];
+
+  // Number-specific reference layer. The matching value-keyed lines (if any) join
+  // the candidate pool for THIS roll, so a reference can only ever surface on the
+  // exact value it names — the rolled value stays the single source of truth (it
+  // already chose the category; here it just widens that category's pool). No new
+  // randomness is introduced: the joined lines are heavily outnumbered by the
+  // category pool, which is the weighting — a reference is an occasional surprise
+  // on its value, never the default, and the no-repeat picker keeps it fresh.
+  const numberLines = NUMBER_LINES[value];
+  const pool = numberLines ? [...catPool, ...numberLines] : catPool;
+
   const key = `${dieType}-${cat}`;
   const hist = (lineHistory[key] ??= []);
 
