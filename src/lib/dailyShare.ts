@@ -3,9 +3,10 @@
 // everywhere), the deep link on its own line (so it stays clickable), and NEVER
 // the face values — only the bead run (count) + outcome.
 //
-// Build 2 will append a server-issued verification code as a 4th line; the builder
-// is structured (a line array) so that's a one-line addition. We deliberately
-// generate NO client-side hash now — a client hash proves nothing.
+// A server-issued verification code is appended as a final line when present (see
+// lib/provenanceClient + /api/daily/submit). The code is opaque and signed
+// server-side — we deliberately generate NO client-side hash, which would prove
+// nothing.
 
 import { CAP } from "@/lib/daily";
 
@@ -18,6 +19,7 @@ export interface DailyShareResult {
   outcome: DailyOutcome;
   score: number;
   streak: number; // current streak; 0 = none (suffix omitted)
+  verifyCode?: string; // server-issued provenance code; appended when present
 }
 
 // Tunable glyphs. A survived roll vs. the bust on the final roll.
@@ -76,7 +78,9 @@ export function buildDailyShareText(r: DailyShareResult): string {
     r.score
   )}${streakSuffix}`;
 
-  // Build 2 will push a verification-code line here.
   const lines = [line1, line2, DAILY_DEEP_LINK];
+  // The signed provenance code rides as a final, opaque footer line — the deep
+  // link above it stays on its own line and clickable.
+  if (r.verifyCode) lines.push(`verify #${r.verifyCode}`);
   return lines.join("\n");
 }

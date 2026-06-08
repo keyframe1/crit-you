@@ -38,6 +38,7 @@ import {
   setOnboardedDaily,
 } from "@/lib/dailyStore";
 import { buildDailyShareText, outcomeFor } from "@/lib/dailyShare";
+import { submitDailyResult } from "@/lib/provenanceClient";
 import { copyText } from "@/lib/clipboard";
 import { analytics, type DailyStatus } from "@/lib/analytics";
 import type { DailyControl } from "@/components/dice3d/dailyControl";
@@ -485,6 +486,11 @@ export default function DailyCrit({ onClose }: Props) {
   const [resultsVisible, setResultsVisible] = useState(false);
   const [streakNow, setStreakNow] = useState<number | null>(null);
 
+  // Provenance: the server-issued verification code for the share grid. Fetched
+  // once the run is finished (best-effort — null until/unless it arrives).
+  const submittedRef = useRef(false);
+  const [verifyCode, setVerifyCode] = useState<string | null>(null);
+
   // The forced value the die must land on, exposed to the 3D die via context.
   const getRollValue = useCallback(() => pendingValueRef.current, []);
   const control = useMemo<DailyControl>(
@@ -682,7 +688,30 @@ export default function DailyCrit({ onClose }: Props) {
     outcome: shareStatus,
     score: finalScore,
     streak: shareStreak,
+    verifyCode: verifyCode ?? undefined,
   });
+
+  // Submit the finished run for provenance and fold the returned code into the
+  // share grid. Fires once per modal open (fresh finish OR a read-only re-open of
+  // today's run) — the server is idempotent, so a re-open returns the same code.
+  // Best-effort: any failure leaves verifyCode null and the grid simply omits it.
+  useEffect(() => {
+    if (!finished || submittedRef.current) return;
+    submittedRef.current = true;
+    const ac = new AbortController();
+    submitDailyResult({
+      date: todayYmd,
+      status: shareStatus,
+      score: finalScore,
+      rollCount: rollCountForShare,
+      signal: ac.signal,
+    })
+      .then((code) => {
+        if (code) setVerifyCode(code);
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [finished, todayYmd, shareStatus, finalScore, rollCountForShare]);
 
   const showResultsPanel = readOnly || (finished && resultsVisible);
   const atCap = game.rollCount >= CAP;
