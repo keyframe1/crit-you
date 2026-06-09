@@ -122,12 +122,12 @@ function buildBeats(die: DieType): Beat[] {
       cue: "The 1: read this twice",
       line: (
         <>
-          Roll a <strong>1</strong> and it&apos;s over. Every point from this
-          run, <strong>gone</strong>, and your streak with it. So bank before you
-          get cocky.
+          Your <strong>first roll</strong> is always safe. After that, a{" "}
+          <strong>1</strong> ends the run: <strong>0 points</strong> and your
+          streak resets. So bank before you get greedy.
         </>
       ),
-      rule: "A 1 busts you: this run → 0 points AND your streak resets.",
+      rule: "First roll is safe. After that, a 1 busts you: this run → 0 points AND your streak resets.",
       illo: (
         <div className="flex items-center justify-center gap-2.5">
           <span

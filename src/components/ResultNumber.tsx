@@ -17,6 +17,11 @@ import { isHighRoll, type DieType, type Roll } from "@/lib/dice";
 const FONT = "var(--font-geist-sans)";
 const SIZE = "clamp(32px, 8vw, 44px)";
 const SIZE_LG = "clamp(36px, 9vw, 48px)"; // only the d12's roomy pentagon face
+// Long values (4+ characters) step down a notch so the wide glyph + its glow
+// halo stay comfortably inside the stage and the stamp/fade keeps its centring —
+// the Celestial's d1000 ceiling (1000) and impossible integer specials (9001,
+// 1337) are the only rolls that reach this width.
+const SIZE_SM = "clamp(28px, 6.5vw, 40px)";
 // The warm glow layer every die's number gains on a natural max.
 const MAX_GLOW = "0 0 16px rgba(255,220,100,0.5)";
 // A lighter version of that warm glow for a "high roll" (top of the range, short
@@ -57,8 +62,16 @@ function halo(rgb: string): string {
   return `0 0 6px rgba(${rgb},0.9), 0 0 13px rgba(${rgb},0.6), 0 0 24px rgba(${rgb},0.4)`;
 }
 
-function getNumberStyle(dieType: DieType, result: number, max: number): CSSProperties {
-  const isMax = result === max;
+function getNumberStyle(
+  dieType: DieType,
+  result: number,
+  max: number,
+  text: string
+): CSSProperties {
+  // At OR beyond the ceiling reads as a natural max: ordinary dice never exceed
+  // their max, while the Celestial's specials (1000 / 9001 / 1337, and the
+  // symbolic glyphs scored as the max) legitimately do — all earn the crit bloom.
+  const isMax = result >= max;
   const isMin = result === 1;
   const isHigh = isHighRoll(result, max);
   const cfg = NUM[dieType] ?? NUM.d20;
@@ -83,7 +96,7 @@ function getNumberStyle(dieType: DieType, result: number, max: number): CSSPrope
     lineHeight: 1,
     fontFamily: FONT,
     fontWeight: 800,
-    fontSize: cfg.size ?? SIZE,
+    fontSize: text.length >= 4 ? SIZE_SM : cfg.size ?? SIZE,
     color: isMin ? "#cfcfcf" : "#ffffff",
     textShadow,
   };
@@ -112,6 +125,9 @@ export default function ResultNumber({
   const reduce = useReducedMotion();
   const show = !!roll && visible;
   const glitch = !!roll && roll.dieType === "d10" && roll.value <= 1;
+  // What the overlay shows: a glyph override (the Celestial's symbolic specials)
+  // or the plain numeric value. `value` still drives the styling + glow below.
+  const text = roll ? roll.display ?? String(roll.value) : "";
 
   return (
     <div
@@ -146,9 +162,9 @@ export default function ResultNumber({
               y: reduce ? 0 : -10,
               transition: { duration: 0.5, ease: "easeOut" },
             }}
-            style={getNumberStyle(roll.dieType, roll.value, roll.max)}
+            style={getNumberStyle(roll.dieType, roll.value, roll.max, text)}
           >
-            {roll.value}
+            {text}
           </motion.span>
         )}
       </AnimatePresence>

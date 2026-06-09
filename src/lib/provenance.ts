@@ -79,12 +79,16 @@ export function validateDailyScore(args: {
   const seq = getDailySequence(d, die); // length CAP, values 1..faces
 
   if (status === "bust") {
-    // A bust = kept rolling and hit the lone 1. The busting draw is the
-    // rollCount-th (1-indexed), so seq[rollCount-1] must be 1, with no earlier 1
-    // (the player would have busted sooner). A bust always scores 0.
+    // A bust = kept rolling PAST the safe first roll and hit the lone 1. The
+    // first roll can't bust (a 1 there scores 1 point), so a bust is always the
+    // second draw or later: rollCount >= 2, and the busting draw is the
+    // rollCount-th (1-indexed), so seq[rollCount-1] must be 1. A 1 among the
+    // draws AFTER the first (indices 1..rollCount-2) would have busted sooner;
+    // seq[0] === 1 is allowed (it was the safe first roll). A bust scores 0.
     if (score !== 0) return { ok: false, reason: "bust_score_nonzero" };
+    if (rollCount < 2) return { ok: false, reason: "bust_on_first_roll" };
     if (seq[rollCount - 1] !== 1) return { ok: false, reason: "bust_not_at_one" };
-    for (let i = 0; i < rollCount - 1; i++) {
+    for (let i = 1; i < rollCount - 1; i++) {
       if (seq[i] === 1) return { ok: false, reason: "bust_premature" };
     }
     return { ok: true };
@@ -102,8 +106,9 @@ export function validateDailyScore(args: {
 
   let sum = 0;
   for (let i = 0; i < rollCount; i++) {
-    // A 1 anywhere in the banked prefix is impossible — it would have busted.
-    if (seq[i] === 1) return { ok: false, reason: "bank_after_one" };
+    // A 1 after the safe first roll is impossible in a banked prefix — it would
+    // have busted. seq[0] === 1 is fine: the safe first roll scores 1 point.
+    if (i > 0 && seq[i] === 1) return { ok: false, reason: "bank_after_one" };
     sum += seq[i];
   }
   if (sum !== score) return { ok: false, reason: "score_mismatch" };

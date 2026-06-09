@@ -21,7 +21,7 @@ const RANGES: Record<DieType, { lowMax: number; midMax: number }> = {
   d12: { lowMax: 4, midMax: 8 }, // 2-4 low · 5-8 mid · 9-11 high
   d20: { lowMax: 5, midMax: 14 }, // 2-5 low · 6-14 mid · 15-19 high
   d30: { lowMax: 8, midMax: 21 }, // 2-8 low · 9-21 mid · 22-29 high
-  dinf: { lowMax: 25, midMax: 75 }, // 2-25 low · 26-75 mid · 76-99 high (d100)
+  dinf: { lowMax: 250, midMax: 750 }, // 2-250 low · 251-750 mid · 751-999 high (d1000)
 };
 
 export function categoryFor(dieType: DieType, value: number): Category {
@@ -754,8 +754,10 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
     ],
   },
   // ═══ D∞ — "The Celestial / The Oracle" ═══
-  // An impossible die — a d100 rendered as a sphere of stars. Speaks like an
-  // ancient cosmic entity: eerily calm, never snarky, knows things.
+  // An impossible die — a weighted d1000 rendered as a sphere of stars. Speaks
+  // like an ancient cosmic entity: eerily calm, never snarky, knows things. Its
+  // loaded values and impossible specials get their own cosmic-with-wit reference
+  // lines below (CELESTIAL_LINES), fired by pickLine on the exact value rolled.
   dinf: {
     nat_min: [
       "The void stares back.",
@@ -843,53 +845,69 @@ export const DIE_LINES: Partial<Record<DieType, Pool>> = {
       "Nearly the apex. The heavens lean close to see if you will reach it.",
     ],
     nat_max: [
-      "One hundred. The universe bends. Even I am impressed.",
+      "One thousand. The universe bends. Even I am impressed.",
       "Perfect. The stars themselves bear witness.",
-      "A hundred. The heavens have rendered their verdict: you.",
+      "A thousand. The heavens have rendered their verdict: you.",
       "Every constellation turns to face you. This is rare.",
       "The cosmos, infinite and ancient, pauses to take note.",
-      "One hundred out of one hundred. The void itself applauds.",
+      "One thousand out of one thousand. The void itself applauds.",
       "Perfection. Somewhere, a new star is named for this.",
       "The wheel completes. You stand at the apex of all sky.",
-      "A flawless hundred. Remember it — the universe rarely repeats itself.",
-      "One hundred. The universe aligns. All of it.",
+      "A flawless thousand. Remember it — the universe rarely repeats itself.",
+      "One thousand. The universe aligns. All of it.",
       "The stars burn brighter for you alone.",
       "Across infinite timelines, this one chose you.",
       "The cosmos says: yes.",
       "Destiny rolled. Destiny won.",
       "It's full of stars.",
-      "One hundred. The dark itself stops to watch. It does not do this often.",
+      "One thousand. The dark itself stops to watch. It does not do this often.",
       "Perfection. A number the heavens keep for the rarest of nights. This is one.",
-      "The full hundred. Creation exhales. Somewhere, the void is taking notes.",
-      "One hundred out of one hundred. The oracle has waited eons to say: yes, this one.",
+      "The full thousand. Creation exhales. Somewhere, the void is taking notes.",
+      "One thousand out of one thousand. The oracle has waited eons to say: yes, this one.",
     ],
   },
 };
 
-// ─── Number-specific reference layer ────────────────────────────────────────
-// Die-neutral movie-reference lines keyed by the EXACT rolled value. The same
-// number is a crit on one die and a low roll on another, so these are written to
-// land on the number alone, regardless of die. pickLine joins the matching list
-// into the candidate pool for that roll (see below) — eligibility falls straight
-// out of the keying, since a die can only ever produce values inside its own
-// range. Values no die can reach are simply absent: 300 is omitted (nothing in
-// the bag rolls it), while 42 and 88 stay because the d∞ (a d100) genuinely can.
+// ─── Number-specific reference layer (ordinary dice) ────────────────────────
+// Die-neutral reference lines keyed by the EXACT rolled value, for every die
+// EXCEPT the Celestial (which has its own cosmic layer, CELESTIAL_LINES, below).
+// The same number is a crit on one die and a low roll on another, so these land
+// on the number alone, regardless of die. pickLine joins the matching list into
+// the candidate pool for that roll (see below) — eligibility falls straight out
+// of the keying, since a die can only ever produce values inside its own range.
+// The blend is deliberately broad — movies, music, games, the internet, and a
+// little number trivia — so the references never read as all-film. Values no
+// ordinary die can reach are simply absent (the largest here is the d30's 30);
+// the d∞'s loaded values + impossible specials live in CELESTIAL_LINES instead.
 const NUMBER_LINES: Record<number, string[]> = {
-  3: ["Three. Like the Amigos, but less heroic."],
-  4: ["Four. Fantastic, even. The whole team showed up."],
-  5: ["Five. Multipass.", "Five. Korben Dallas remains unimpressed."],
+  3: [
+    "Three. Like the Amigos, but less heroic.",
+    "Three. A full Triforce. Hyrule approves.",
+  ],
+  4: [
+    "Four. Fantastic, even. The whole team showed up.",
+    "Four. The whole Beatles. Roll on.",
+  ],
+  5: [
+    "Five. Multipass.",
+    "Five. Korben Dallas remains unimpressed.",
+    "Five. The Olympic rings. Go for gold.",
+  ],
   6: [
     "Six. I see dead people. Roughly six of them.",
     "Sixth sense says don't quit your day job.",
+    "Six. A perfect number, mathematically: 1+2+3. Show-off.",
   ],
   7: ["Seven. What's in the box? Oh. It's a seven.", "Lucky seven. Allegedly."],
   8: [
     "Eight. Your 8 Mile moment. Try not to choke.",
     "Eight. Crazy. Nobody's winning.",
+    "Eight. The Magic 8-Ball says outlook not so good.",
   ],
   9: [
     "Nine. District nine. Consider yourself relocated.",
     "Dressed to the nines, headed nowhere.",
+    "Nine. A cat's whole set of lives. Spend wisely.",
   ],
   10: ["Ten. A perfect ten. Bo Derek is fuming.", "Ten. Flawless. Deeply suspicious."],
   11: [
@@ -897,25 +915,66 @@ const NUMBER_LINES: Record<number, string[]> = {
     "Eleven. The Upside Down sends its regards.",
     "Eleven. Ocean's would've recruited you.",
   ],
-  12: ["Twelve monkeys, zero sense.", "A dozen. Bakers would round up out of pity."],
+  12: [
+    "Twelve monkeys, zero sense.",
+    "A dozen. Bakers would round up out of pity.",
+    "Twelve. A dozen. Tidy.",
+  ],
   13: [
     "Thirteen. Houston, we have a problem.",
     "Thirteen. Jason's favorite. Sleep tight.",
     "Unlucky for some. You, specifically.",
+    "Thirteen. A baker's dozen. One free, on the house.",
   ],
-  20: ["Twenty. Hindsight is 20/20. Foresight, less so."],
+  20: [
+    "Twenty. Hindsight is 20/20. Foresight, less so.",
+    "Twenty. Four score and seven years ago, someone got famous. You got a twenty.",
+  ],
   21: [
     "Twenty-one. Blackjack. The house still wins.",
     "Twenty-one. Jump Street. Undercover as competent.",
   ],
   23: ["Twenty-three. The number's following you now. Good luck with that."],
   24: ["Twenty-four. You have twenty-four hours. Tick tock."],
-  28: ["Twenty-eight days later, and you're still rolling."],
-  // d∞ (d100) only — reachable, so they stay. A number-line must never fire on a
-  // value that wasn't rolled, so 300 (which nothing can roll) is intentionally absent.
-  42: ["Forty-two. The answer to life, the universe, and everything. You're welcome."],
-  88: ["Eighty-eight. If my calculations are correct, this is about to get heavy."],
+  28: [
+    "Twenty-eight days later, and you're still rolling.",
+    "Twenty-eight. A perfect number, mathematically. Also: days later.",
+  ],
 };
+
+// ─── Celestial reference layer (the d∞ only) ────────────────────────────────
+// The weighted d1000 is "drawn to" meaningful numbers; when it lands on one — a
+// loaded in-range value or an impossible special — the oracle speaks to THAT
+// number. Keyed by the rolled value as a string, or by the glyph for the
+// symbolic specials (∞ π e φ), which transcend the range and show as their
+// symbol. These are the cosmic-with-wit voice of the Celestial and fire ONLY on
+// the d∞, only on their exact value (see pickLine). Single-source: the rolled
+// result supplies both the displayed glyph/number and this key (see
+// lib/celestial), so a line can never desync from the number shown.
+const CELESTIAL_LINES: Record<string, string[]> = {
+  "7": ["Seven. The name's Die. Celestial Die."],
+  "42": ["Forty-two. The answer to life, the universe, and everything. Obviously."],
+  "88": ["Eighty-eight. Where you're going, you won't need roads."],
+  "300": ["Three hundred. THIS. IS. SPARTA."],
+  "404": ["Four oh four. Roll not found."],
+  "420": ["Four twenty. The cosmos giggles."],
+  "666": ["Six hundred sixty-six. The number of the beast. Bold choice."],
+  "777": ["Triple seven. Jackpot. The cosmos is feeling generous."],
+  "1000": ["One thousand. A perfect grand. They call this the ceiling. They're wrong."],
+  "9001": ["Nine thousand and one. IT'S OVER NINE THOUSAND."],
+  "1337": ["Thirteen thirty-seven. Elite. The internet kneels."],
+  "∞": ["Infinity. Naturally. Did you expect a number?"],
+  "π": ["Pi. Endless, irrational, showing off. On brand."],
+  "e": ["Euler's number. The math nerds just gasped."],
+  "φ": ["The golden ratio. Even your luck is aesthetically superior."],
+};
+
+// The impossible specials fire GUARANTEED when rolled — they are far too rare to
+// pool (the line IS the payoff, so it must land). The loaded in-range values
+// instead POOL their line into the cosmic category (an occasional surprise, like
+// the die-neutral number layer above), which also keeps the cosmic category
+// pools — including nat_max, the ceiling 1000 — in rotation. See pickLine.
+const CELESTIAL_GUARANTEED = new Set(["9001", "1337", "∞", "π", "e", "φ"]);
 
 // Per-(die, category) memory of recently-used line indices, so we never repeat a
 // line twice in a row and rarely within five rolls. Module-level state persists
@@ -923,25 +982,11 @@ const NUMBER_LINES: Record<number, string[]> = {
 const lineHistory: Record<string, number[]> = {};
 const HISTORY_LEN = 5;
 
-// Pick a line for a roll. Deterministic category, then a random line within it
-// that avoids the last few used. When the pool is exhausted by history, the
-// history resets and starts fresh.
-export function pickLine(dieType: DieType, value: number): string {
-  const cat = categoryFor(dieType, value);
-  const catPool = DIE_LINES[dieType]?.[cat] ?? FALLBACK_LINES[cat];
-
-  // Number-specific reference layer. The matching value-keyed lines (if any) join
-  // the candidate pool for THIS roll, so a reference can only ever surface on the
-  // exact value it names — the rolled value stays the single source of truth (it
-  // already chose the category; here it just widens that category's pool). No new
-  // randomness is introduced: the joined lines are heavily outnumbered by the
-  // category pool, which is the weighting — a reference is an occasional surprise
-  // on its value, never the default, and the no-repeat picker keeps it fresh.
-  const numberLines = NUMBER_LINES[value];
-  const pool = numberLines ? [...catPool, ...numberLines] : catPool;
-
-  const key = `${dieType}-${cat}`;
-  const hist = (lineHistory[key] ??= []);
+// A no-repeat pick from a pool, keyed by a history bucket: a random line that
+// avoids the last few used. When the pool is exhausted by history, the history
+// resets and starts fresh.
+function pickFrom(historyKey: string, pool: string[]): string {
+  const hist = (lineHistory[historyKey] ??= []);
 
   let available = pool.map((_, i) => i).filter((i) => !hist.includes(i));
   if (available.length === 0) {
@@ -954,4 +999,42 @@ export function pickLine(dieType: DieType, value: number): string {
   if (hist.length > HISTORY_LEN) hist.shift();
 
   return pool[chosen];
+}
+
+// Pick a line for a roll. Deterministic category, then a no-repeat line within
+// it. `lineKey` is the exact key into the reference layer — it defaults to the
+// numeric value (the only caller that overrides it is the Celestial, which passes
+// the value-or-glyph from its single roll result; see lib/celestial). The rolled
+// value stays the single source of truth: it chooses the category here, and the
+// key is derived from that same result, so a line can never desync from it.
+export function pickLine(
+  dieType: DieType,
+  value: number,
+  lineKey: string = String(value)
+): string {
+  const cat = categoryFor(dieType, value);
+  const catPool = DIE_LINES[dieType]?.[cat] ?? FALLBACK_LINES[cat];
+
+  // The Celestial has its OWN cosmic reference layer. When the oracle lands on a
+  // meaningful value, it speaks to THAT number: an impossible special fires its
+  // line GUARANTEED (too rare to pool), while a loaded in-range value pools its
+  // line into the cosmic category as an occasional surprise (keeping the cosmic
+  // category pools alive). Off a meaningful value, it just uses its category.
+  if (dieType === "dinf") {
+    const celestial = CELESTIAL_LINES[lineKey];
+    if (celestial && CELESTIAL_GUARANTEED.has(lineKey)) {
+      return pickFrom(`dinf-ref:${lineKey}`, celestial);
+    }
+    const pool = celestial ? [...catPool, ...celestial] : catPool;
+    return pickFrom(`dinf-${cat}`, pool);
+  }
+
+  // Ordinary dice: the die-neutral number layer joins the category pool as an
+  // occasional surprise — a reference can only ever surface on the exact value it
+  // names, and it's heavily outnumbered by the category lines, so it stays rare
+  // and the no-repeat picker keeps it fresh. (No new randomness for the value: it
+  // already chose the category; here it just widens that category's pool.)
+  const numberLines = NUMBER_LINES[value];
+  const pool = numberLines ? [...catPool, ...numberLines] : catPool;
+  return pickFrom(`${dieType}-${cat}`, pool);
 }

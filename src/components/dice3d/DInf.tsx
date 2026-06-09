@@ -6,10 +6,13 @@ import { Sparkles, Billboard } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import gsap from "gsap";
 import { useIdleFloat } from "./useIdleFloat";
+import { rollCelestial, type CelestialMeta } from "@/lib/celestial";
 
 interface Props {
   rollNonce: number;
-  onResult: (value: number) => void; // fired once the orb resolves
+  // Fired once the orb resolves: the numeric magnitude plus the celestial meta
+  // (the glyph/number to show and the exact reference-line key).
+  onResult: (value: number, meta?: CelestialMeta) => void;
   onRollStart?: () => void; // fired when a fresh roll's spin begins
 }
 
@@ -163,7 +166,7 @@ function spikeTexture(size = 256): THREE.CanvasTexture {
   return tex;
 }
 
-// THE CELESTIAL (d100) — a polished obsidian orb that is a window into deep
+// THE CELESTIAL (weighted d1000) — a polished obsidian orb that is a window into deep
 // space, sitting on the clean cream background with only its natural floor
 // shadow (no exterior atmosphere). Over the orb: ~100 twinkling stars + a static
 // "distant" depth field, the hidden d20 constellation, cross-flare sparkles, a
@@ -486,9 +489,13 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
     // A fresh roll has begun: let the page clear the previous result number.
     onRollStartRef.current?.();
 
-    const value = Math.floor(Math.random() * 100) + 1;
-    const isMax = value >= 100;
-    const isMin = value <= 1;
+    // ONE celestial draw drives everything: the number/glyph shown, its reference
+    // line (via the meta below), and the cosmic tier of this animation. A weighted
+    // d1000 with rare impossible specials — see lib/celestial.
+    const result = rollCelestial(Math.random);
+    const value = result.value;
+    const isMax = result.cosmic === "max";
+    const isMin = result.cosmic === "min";
 
     // Flash every star bright, double the nebula lights, brighten the orb's own
     // glow and the d20 constellation during the spin.
@@ -511,7 +518,10 @@ export default function DInf({ rollNonce, onResult, onRollStart }: Props) {
         // CSS-overlay number in and raises the bubble. The input lock is held
         // until the cosmos recovery finishes (see resume).
         const reveal = () => {
-          onResultRef.current(value);
+          onResultRef.current(value, {
+            display: result.display,
+            lineKey: result.lineKey,
+          });
           resolveCosmos();
         };
         // Ethereal resolve pulse: scale 1 → 1.02 → 1 over 0.4s, then reveal.

@@ -57,7 +57,7 @@ export function mulberry32(seed: number): () => number {
 // ─── Today's die + roll sequence ─────────────────────────────────────────────
 
 // The playable dice for the daily, low → high. The celestial d∞ is excluded (it
-// is a d100 with bespoke cosmos animations, not a press-your-luck fit).
+// is a weighted d1000 with bespoke cosmos animations, not a press-your-luck fit).
 export const DAILY_DICE: DieType[] = DICE.filter((d) => d.type !== "dinf").map(
   (d) => d.type
 );
@@ -114,9 +114,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.rollCount >= CAP) return state; // no rolls past the cap
       const { value } = action;
       const rolls = [...state.rolls, value];
-      // A 1 busts the run: record the roll for display, total is wiped to a
-      // score of 0 (see `score`), the run ends.
-      if (value === 1) return { ...state, rolls, status: "busted" };
+      // The FIRST roll is always safe: it establishes the starting total, so a 1
+      // on roll one just scores 1 point and the run continues. From the second
+      // roll on, a 1 busts — the run ends and scores 0 (see `score`). The roll
+      // index is `state.rollCount` (successful commits so far); guarding the bust
+      // on it keeps the bust→0 path off roll one (index 0).
+      if (value === 1 && state.rollCount > 0) {
+        return { ...state, rolls, status: "busted" };
+      }
       return {
         total: state.total + value,
         rollCount: state.rollCount + 1,

@@ -6,6 +6,7 @@ import { Canvas } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
 import gsap from "gsap";
 import { type DieType } from "@/lib/dice";
+import { type CelestialMeta } from "@/lib/celestial";
 import { usePrefersReducedMotion } from "@/lib/useReducedMotion";
 import { DailyControlContext, type DailyControl } from "./dice3d/dailyControl";
 import D4 from "./dice3d/D4";
@@ -20,8 +21,10 @@ import DInf from "./dice3d/DInf";
 interface Props {
   dieType: DieType;
   // Fired with the rolled value once the die has landed; the parent owns the
-  // personality line, the CSS-overlay result number, and the share state.
-  onRoll: (value: number) => void;
+  // personality line, the CSS-overlay result number, and the share state. The
+  // optional `meta` is only ever passed by the Celestial d∞ (a glyph/number to
+  // show + its reference-line key); every other die omits it.
+  onRoll: (value: number, meta?: CelestialMeta) => void;
   // Fired when a fresh roll's tumble begins, so the parent can clear the stale
   // result number before the new value lands.
   onRollStart?: () => void;
@@ -53,7 +56,7 @@ function Die3D({
 }: {
   dieType: DieType;
   rollNonce: number;
-  onResult: (value: number) => void;
+  onResult: (value: number, meta?: CelestialMeta) => void;
   onRollStart?: () => void;
 }) {
   switch (dieType) {
@@ -106,7 +109,7 @@ function DieStage({
   phase: SwapPhase;
   reduce: boolean;
   rollNonce: number;
-  onResult: (value: number) => void;
+  onResult: (value: number, meta?: CelestialMeta) => void;
   onRollStart?: () => void;
 }) {
   const wrapRef = useRef<THREE.Group>(null);

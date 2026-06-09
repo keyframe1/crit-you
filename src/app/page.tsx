@@ -12,6 +12,7 @@ import SoundToggle from "@/components/SoundToggle";
 import BrandedLoader from "@/components/BrandedLoader";
 import AmbientPip from "@/components/AmbientPip";
 import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
+import { type CelestialMeta } from "@/lib/celestial";
 import { pickLine } from "@/lib/lines";
 import { analytics } from "@/lib/analytics";
 import {
@@ -74,7 +75,7 @@ export default function Home() {
   // the number kicks off its hold timer: it stamps in immediately (ResultNumber),
   // holds ~1.1s fully visible, then fades cleanly out.
   const handleRoll = useCallback(
-    (value: number) => {
+    (value: number, meta?: CelestialMeta) => {
       const max = maxFor(dieType);
       setRolling(false);
       setRoll({
@@ -82,7 +83,11 @@ export default function Home() {
         value,
         max,
         dieType,
-        line: pickLine(dieType, value),
+        // The Celestial supplies a glyph/number to show + its exact line key; the
+        // value still drives styling, sound, and the category. Every other die
+        // passes no meta, so display stays undefined and the line keys off value.
+        display: meta?.display,
+        line: pickLine(dieType, value, meta?.lineKey),
       });
       setNumberVisible(true);
       if (hideTimer.current) clearTimeout(hideTimer.current);

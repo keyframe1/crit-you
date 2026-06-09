@@ -9,7 +9,9 @@ export interface DieDef {
 }
 
 // Ordered low → high. This order is the order shown in the selector carousel.
-// d∞ ("The Celestial") is a d100 rendered as a star sphere; it sits at the end.
+// d∞ ("The Celestial") is a weighted d1000 rendered as a star sphere; it sits at
+// the end. Its roll logic (loaded values + impossible specials) lives in
+// lib/celestial, which keeps CELESTIAL_MAX in lock-step with this max.
 export const DICE: DieDef[] = [
   { type: "d4", max: 4 },
   { type: "d6", max: 6 },
@@ -18,7 +20,7 @@ export const DICE: DieDef[] = [
   { type: "d12", max: 12 },
   { type: "d20", max: 20 },
   { type: "d30", max: 30 },
-  { type: "dinf", max: 100 },
+  { type: "dinf", max: 1000 },
 ];
 
 export const DEFAULT_DIE: DieType = "d20";
@@ -45,6 +47,11 @@ export interface Roll {
   max: number;
   dieType: DieType;
   line: string;
+  // Optional overlay-text override. The result number normally shows `value`;
+  // the Celestial's symbolic specials (∞ π e φ) set this to their glyph so the
+  // display can show the symbol while `value` stays a number for styling. See
+  // lib/celestial + ResultNumber.
+  display?: string;
 }
 
 export function isNatMax(roll: Roll): boolean {

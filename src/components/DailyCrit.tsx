@@ -51,6 +51,7 @@ import {
   playBank,
   playClack,
   playFlourish,
+  playLand,
   playRollResult,
   primeAudio,
   tierForDie,
@@ -326,7 +327,8 @@ function OddsReadout({
             className="overflow-hidden"
           >
             <ul className="mt-2 space-y-1 font-mono text-[11px] leading-relaxed text-[var(--mid)]">
-              <li>• {faces} faces — only the lone 1 busts you.</li>
+              <li>• Roll one is free — it can&apos;t bust.</li>
+              <li>• After that, {faces} faces — only the lone 1 busts you.</li>
               <li>
                 • Survive ({faces - 1}/{faces}): gain 2–{faces}, average +
                 {avg.toFixed(1)}.
@@ -554,7 +556,11 @@ export default function DailyCrit({ onClose }: Props) {
   // the result number, and set the decision-snark bubble.
   const handleResult = useCallback(
     (value: number) => {
-      const busted = value === 1;
+      // The first roll is safe: a 1 on roll one (rollCount 0) scores 1 point and
+      // the run continues — it is NOT a bust (mirrors gameReducer + the server
+      // validator). Only a 1 from the second roll on busts.
+      const safeFirstRoll = value === 1 && gameRef.current.rollCount === 0;
+      const busted = value === 1 && !safeFirstRoll;
       const rollNumber = gameRef.current.rollCount + 1;
       const line = pickDailyLine(
         busted
@@ -567,9 +573,12 @@ export default function DailyCrit({ onClose }: Props) {
       hideTimer.current = setTimeout(() => setNumberVisible(false), 1300);
 
       // Per-roll landing sound: a 1 busts (womp), a faces nat-max flourishes, a
-      // near-crit sparkles, anything else just ticks. The bigger bank-outcome
-      // flourish (perfect run / streak milestone) is handled at finish below.
-      playRollResult(tier, value, faces);
+      // near-crit sparkles, anything else just ticks. A safe first-roll 1 is a
+      // normal low roll (1 point), not a bust, so it lands softly instead of
+      // womping. The bigger bank-outcome flourish (perfect run / streak
+      // milestone) is handled at finish below.
+      if (safeFirstRoll) playLand(tier);
+      else playRollResult(tier, value, faces);
 
       dispatch({ type: "ROLL", value });
       rollingRef.current = false;
