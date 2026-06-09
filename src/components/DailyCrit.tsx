@@ -14,7 +14,7 @@ import {
   AnimatePresence,
   useReducedMotion,
 } from "framer-motion";
-import { Share2, Copy, Flame, X, HelpCircle } from "lucide-react";
+import { Share2, Copy, Check, Flame, X, HelpCircle } from "lucide-react";
 import {
   CAP,
   gameReducer,
@@ -153,18 +153,31 @@ function Countdown() {
 // TEXT-share is offered as a secondary where the platform supports it. No images,
 // no markdown. (This whole modal is client-only — dynamic ssr:false — so a
 // render-time capability check is hydration-safe.)
-function DailyShareButton({
+//
+// The grid is shown verbatim above the buttons — a live preview of the EXACT same
+// `text` that Copy / native Share send (one source, so it's byte-for-byte what
+// lands on the clipboard). On copy the primary button flips to a confirmed
+// "Copied" state so the action is unmistakable.
+function DailyShare({
   text,
   status,
 }: {
   text: string;
   status: DailyStatus;
 }) {
-  const [toast, setToast] = useState(false);
-  const ping = () => {
-    setToast(true);
-    setTimeout(() => setToast(false), 2200);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const confirmCopied = () => {
+    setCopied(true);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 2200);
   };
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    []
+  );
 
   const canNativeShare =
     typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -172,7 +185,7 @@ function DailyShareButton({
   const handleCopy = async () => {
     analytics.shareCopied("daily", status);
     await copyText(text);
-    ping();
+    confirmCopied();
   };
 
   const handleShare = async () => {
@@ -187,45 +200,78 @@ function DailyShareButton({
       }
     }
     await copyText(text);
-    ping();
+    confirmCopied();
   };
 
   return (
-    <div className="relative flex items-center gap-2">
-      <button
-        onClick={handleCopy}
-        className="flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white transition-opacity hover:opacity-90"
-      >
-        <Copy size={16} strokeWidth={2} />
-        Copy result
-      </button>
-      {canNativeShare && (
-        <button
-          onClick={handleShare}
-          className="flex items-center gap-1.5 rounded-full border border-[var(--ink)]/15 bg-black/[0.03] px-4 py-2.5 text-[14px] font-medium text-[var(--ink)] transition-colors hover:bg-black/[0.06]"
+    <div className="flex w-full flex-col items-center gap-3">
+      {/* Live preview — the precise string Copy / Share will send. Monospace and
+          whitespace-preserving so the bead grid + link + verify code read exactly
+          as they will once pasted. */}
+      <div className="w-full">
+        <p className="mb-1.5 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--mid)]">
+          What you&apos;ll share
+        </p>
+        <pre
+          aria-label="Exact text that will be copied"
+          className="m-0 w-full overflow-x-auto rounded-xl bg-black/[0.03] px-4 py-3 text-center font-mono text-[12px] leading-relaxed text-[var(--ink)]"
+          style={{
+            border: "1px solid rgba(0,0,0,0.06)",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
         >
-          <Share2 size={15} strokeWidth={2} />
-          Share…
+          {text}
+        </pre>
+      </div>
+
+      <div className="relative flex items-center gap-2">
+        <button
+          onClick={handleCopy}
+          aria-live="polite"
+          className="flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-medium text-white transition-colors"
+          style={{ background: copied ? "#27ae60" : "var(--accent)" }}
+        >
+          {copied ? (
+            <>
+              <Check size={16} strokeWidth={2.5} />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy size={16} strokeWidth={2} />
+              Copy result
+            </>
+          )}
         </button>
-      )}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg px-3 py-1.5 font-mono text-[11px] tracking-wide text-[var(--ink)]"
-            style={{
-              background: "#ffffff",
-              border: "1px solid rgba(0,0,0,0.08)",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-            }}
+        {canNativeShare && (
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 rounded-full border border-[var(--ink)]/15 bg-black/[0.03] px-4 py-2.5 text-[14px] font-medium text-[var(--ink)] transition-colors hover:bg-black/[0.06]"
           >
-            Copied — paste it in Discord.
-          </motion.div>
+            <Share2 size={15} strokeWidth={2} />
+            Share…
+          </button>
         )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {copied && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg px-3 py-1.5 font-mono text-[11px] tracking-wide text-[var(--ink)]"
+              style={{
+                background: "#ffffff",
+                border: "1px solid rgba(0,0,0,0.08)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+              }}
+            >
+              Copied — paste it anywhere.
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -947,7 +993,7 @@ export default function DailyCrit({ onClose }: Props) {
               reduce={reduce}
             />
 
-            <DailyShareButton text={shareText} status={shareStatus} />
+            <DailyShare text={shareText} status={shareStatus} />
 
             {readOnly && (
               <p className="text-center font-mono text-[11px] leading-relaxed text-[var(--mid)]">

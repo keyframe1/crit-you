@@ -10,6 +10,7 @@ import ResultNumber from "@/components/ResultNumber";
 import DailyButton from "@/components/DailyButton";
 import SoundToggle from "@/components/SoundToggle";
 import BrandedLoader from "@/components/BrandedLoader";
+import AmbientPip from "@/components/AmbientPip";
 import { DEFAULT_DIE, maxFor, type DieType, type Roll } from "@/lib/dice";
 import { pickLine } from "@/lib/lines";
 import { analytics } from "@/lib/analytics";
@@ -34,6 +35,10 @@ export default function Home() {
   // Its visibility is owned here so it can fade out on its own timer — after the
   // hold, or when a new roll begins — while the bubble and share state persist.
   const [numberVisible, setNumberVisible] = useState(false);
+  // Tracks an active tumble so the ambient Pip yields to the core roll (it never
+  // appears, or exits, while the die is rolling). Set when a roll begins, cleared
+  // when the value lands.
+  const [rolling, setRolling] = useState(false);
   const rollId = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,6 +76,7 @@ export default function Home() {
   const handleRoll = useCallback(
     (value: number) => {
       const max = maxFor(dieType);
+      setRolling(false);
       setRoll({
         id: ++rollId.current,
         value,
@@ -97,6 +103,7 @@ export default function Home() {
   const handleRollStart = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setNumberVisible(false);
+    setRolling(true);
     playClack(tierForDie(dieType));
   }, [dieType]);
 
@@ -199,6 +206,11 @@ export default function Home() {
         </footer>
       </div>
       </main>
+      {/* Ambient Pip — occasionally rolls across the bottom edge during idle
+          free-play. Yields while the die is rolling (and self-suppresses behind
+          the Daily modal / under reduced motion). Only mounts once the app is
+          ready so it never fires behind the cold-open loader. */}
+      {appReady && <AmbientPip active={!rolling} />}
     </>
   );
 }

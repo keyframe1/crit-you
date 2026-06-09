@@ -1,23 +1,24 @@
 import { ImageResponse } from "next/og";
 
-// 180×180 Apple touch icon: a crimson d20 silhouette on the cream brand ground.
+// 180×180 Apple touch icon: Pip's face on the cream brand ground. Same crimson
+// die + minimal smug face as the favicon (icon.svg), generated larger here with a
+// little cream margin so it reads as Pip sitting on the brand background. The face
+// geometry is kept identical to icon.svg so the two never drift apart.
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-// The d20 hex with faint internal facet lines (matches the in-app wireframe).
-const DIE_SVG = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' width='118' height='118'>
-  <polygon points='80,8 152,44 152,116 80,152 8,116 8,44' fill='#c0392b'/>
-  <g stroke='#1a1a18' stroke-opacity='0.5' stroke-width='3' fill='none' stroke-linejoin='round'>
-    <line x1='80' y1='8' x2='80' y2='152'/>
-    <line x1='8' y1='44' x2='152' y2='116'/>
-    <line x1='152' y1='44' x2='8' y2='116'/>
-    <line x1='8' y1='44' x2='152' y2='44'/>
-    <line x1='8' y1='116' x2='152' y2='116'/>
-  </g>
+// Pip's resting (smug) face — a bold crimson die with a soft top highlight, two
+// cream eyes, and an asymmetric cream smirk. Mirrors icon.svg's geometry.
+const PIP_SVG = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='140' height='140'>
+  <rect x='4' y='4' width='92' height='92' rx='26' fill='#c0392b'/>
+  <rect x='16' y='13' width='68' height='24' rx='12' fill='#ffffff' fill-opacity='0.16'/>
+  <circle cx='37' cy='45' r='9.5' fill='#f6f1e7'/>
+  <circle cx='63' cy='45' r='9.5' fill='#f6f1e7'/>
+  <path d='M32 66 Q49 79 68 60' fill='none' stroke='#f6f1e7' stroke-width='8' stroke-linecap='round'/>
 </svg>`;
 
 export default function AppleIcon() {
-  const die = `data:image/svg+xml,${encodeURIComponent(DIE_SVG)}`;
+  const pip = `data:image/svg+xml,${encodeURIComponent(PIP_SVG)}`;
   return new ImageResponse(
     (
       <div
@@ -31,7 +32,7 @@ export default function AppleIcon() {
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={die} width={118} height={118} alt="" />
+        <img src={pip} width={140} height={140} alt="" />
       </div>
     ),
     { ...size }
